@@ -24,7 +24,7 @@ public class MainActivity extends AppCompatActivity {
         List<MediaController> controllers = mm.getActiveSessions(
                 new ComponentName(this, NotificationListenerExampleService.class));
         for (MediaController controller : controllers) {
-            controller.registerCallback(this.cb);
+            //controller.registerCallback(this.cb);
             String test = controller.getPackageName();
             int i = 2;
         }
