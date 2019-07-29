@@ -9,6 +9,7 @@
         android:roundIcon="@mipmap/ic_launcher_round"
         android:supportsRtl="true"
         android:theme="@style/AppTheme">
+        <activity android:name=".NewWordActivity"></activity>
         <activity android:name=".MainActivity">
             <intent-filter>
                 <action android:name="android.intent.action.MAIN" />
@@ -17,7 +18,8 @@
             </intent-filter>
         </activity>
 
-        <service android:name=".NotificationListenerExampleService"
+        <service
+            android:name=".NotificationListenerExampleService"
             android:label="AudioBookmarkService"
             android:permission="android.permission.BIND_NOTIFICATION_LISTENER_SERVICE">
             <intent-filter>
@@ -26,11 +28,12 @@
         </service>
 
         <receiver
-            android:name=".AudioBroadcastReceiver" android:enabled="true"
+            android:name=".AudioBroadcastReceiver"
+            android:enabled="true"
             android:exported="true">
             <intent-filter>
                 <action android:name="com.android.music.playstatechanged" />
-                <action android:name="com.spotify.music.playbackstatechanged"/>
+                <action android:name="com.spotify.music.playbackstatechanged" />
             </intent-filter>
         </receiver>
     </application>

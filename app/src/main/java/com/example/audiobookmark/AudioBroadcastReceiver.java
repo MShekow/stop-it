@@ -4,6 +4,7 @@ import android.content.BroadcastReceiver;
 import android.content.ComponentName;
 import android.content.Context;
 import android.content.Intent;
+import android.media.MediaPlayer;
 import android.media.session.MediaController;
 import android.media.session.MediaSessionManager;
 import android.media.session.PlaybackState;
@@ -24,7 +25,12 @@ public class AudioBroadcastReceiver extends BroadcastReceiver {
     private static AudioMetadata lastMetaData = null;
 
     /*
+     * IntentProcessor abstract class
+     * process()
+     * shouldDiscard() - impl checks for empty values, sub-impl MAY check for other things
+     * isPaused()
      *
+     * Method that selects the right one
      */
 
     @Override
@@ -115,6 +121,9 @@ public class AudioBroadcastReceiver extends BroadcastReceiver {
             long currentTimeMs = SystemClock.elapsedRealtime();
             if ((currentTimeMs - AudioBroadcastReceiver.lastPauseTimestampMs) < AudioBroadcastReceiver.THRESHOLD_MS) {
                 Log.d(TAG, "Triggered event: " + track);
+                MediaPlayer mediaPlayer = MediaPlayer.create(context, R.raw.beep);
+                mediaPlayer.start(); // no need to call prepare(); create() does that for you
+
             }else {
                 long diff = currentTimeMs - AudioBroadcastReceiver.lastPauseTimestampMs;
                 Log.d(TAG, "Difference too large: " + diff);
