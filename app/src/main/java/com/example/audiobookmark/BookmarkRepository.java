@@ -1,6 +1,6 @@
 package com.example.audiobookmark;
 
-import android.app.Application;
+import android.content.Context;
 import android.os.AsyncTask;
 
 import androidx.lifecycle.LiveData;
@@ -11,8 +11,8 @@ public class BookmarkRepository {
     private BookmarkDao dao;
     private LiveData<List<Bookmark>> allBookmarks;
 
-    public BookmarkRepository(Application application) {
-        BookmarkRoomDatabase db = BookmarkRoomDatabase.getDatabase(application);
+    public BookmarkRepository(Context context) {
+        BookmarkRoomDatabase db = BookmarkRoomDatabase.getDatabase(context);
         dao = db.dao();
         allBookmarks = dao.getAllBookmarks();
     }
