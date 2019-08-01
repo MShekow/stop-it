@@ -2,6 +2,7 @@ package com.example.audiobookmark;
 
 import androidx.lifecycle.LiveData;
 import androidx.room.Dao;
+import androidx.room.Delete;
 import androidx.room.Insert;
 import androidx.room.Query;
 
@@ -12,6 +13,9 @@ public interface BookmarkDao {
 
     @Insert
     void insert(Bookmark bookmark);
+
+    @Delete
+    void delete(Bookmark bookmark);
 
     @Query("DELETE FROM audio_bookmarks")
     void deleteAll();
