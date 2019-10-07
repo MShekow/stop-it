@@ -4,14 +4,18 @@ import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
 import androidx.appcompat.app.AppCompatActivity;
 import androidx.appcompat.widget.Toolbar;
+import androidx.core.app.NotificationCompat;
 import androidx.lifecycle.Observer;
 import androidx.lifecycle.ViewModelProviders;
 import androidx.recyclerview.widget.DividerItemDecoration;
 import androidx.recyclerview.widget.LinearLayoutManager;
 import androidx.recyclerview.widget.RecyclerView;
 
+import android.app.Notification;
+import android.app.PendingIntent;
 import android.content.ComponentName;
 import android.content.Context;
+import android.content.Intent;
 import android.media.MediaMetadata;
 import android.media.session.MediaController;
 import android.media.session.MediaSession;
@@ -31,6 +35,7 @@ import java.util.List;
 public class MainActivity extends AppCompatActivity {
     private BookmarkViewModel viewModel;
     static final String TAG = "MainActivity";
+
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -57,75 +62,28 @@ public class MainActivity extends AppCompatActivity {
             }
         });
 
-        MediaSessionManager mm = (MediaSessionManager) this.getSystemService(
-                Context.MEDIA_SESSION_SERVICE);
-        List<MediaController> controllers = mm.getActiveSessions(
-                new ComponentName(getApplicationContext(), NotificationListenerExampleService.class));
-        MediaController doggCatcherMediaController = null;
-        for (MediaController controller : controllers) {
-            if (controller.getPackageName().contains("spotify")) {
-                doggCatcherMediaController = controller;
-                break;
+        Intent intent = new Intent(this, MediaCallbackService.class);
+        startService(intent);
+
+
+        if (false) {
+            MediaSessionManager mm = (MediaSessionManager) this.getSystemService(
+                    Context.MEDIA_SESSION_SERVICE);
+            List<MediaController> controllers = mm.getActiveSessions(
+                    new ComponentName(getApplicationContext(), NotificationListenerExampleService.class));
+            MediaController catcherMediaController = null;
+            for (MediaController controller : controllers) {
+                if (controller.getPackageName().contains("pocket")) {
+                    catcherMediaController = controller;
+                    break;
+                }
             }
-        }
 
-        if (doggCatcherMediaController != null) {
-            Log.d(TAG, "Controller: " + doggCatcherMediaController.toString());
-            doggCatcherMediaController.registerCallback(new MediaController.Callback() {
-                @Override
-                public void onSessionDestroyed() {
-                    Log.d(TAG, "onSessionDestroyed");
-                }
-
-                @Override
-                public void onSessionEvent(@NonNull String event, @Nullable Bundle extras) {
-                    Log.d(TAG, "onSessionEvent " + event);
-                }
-
-                @Override
-                public void onPlaybackStateChanged(@Nullable PlaybackState state) {
-                    Log.d(TAG, "onPlaybackStateChanged " + state.getState());
-
-                    MediaSessionManager mm = (MediaSessionManager) getSystemService(
-                            Context.MEDIA_SESSION_SERVICE);
-                    List<MediaController> controllers = mm.getActiveSessions(
-                            new ComponentName(getApplicationContext(), NotificationListenerExampleService.class));
-                    MediaController doggCatcherMediaController = null;
-                    for (MediaController controller : controllers) {
-                        if (controller.getPackageName().contains("spotify")) {
-                            doggCatcherMediaController = controller;
-                            break;
-                        }
-                    }
-
-                    if (doggCatcherMediaController != null) {
-                        Log.d(TAG, "Controller: " + doggCatcherMediaController.toString());
-                        doggCatcherMediaController.registerCallback(this);
-                        Log.d(TAG, "RE-Registered CB");
-                    }
-                }
-
-                @Override
-                public void onMetadataChanged(@Nullable MediaMetadata metadata) {
-                    Log.d(TAG, "onMetadataChanged");
-                }
-
-                @Override
-                public void onQueueChanged(@Nullable List<MediaSession.QueueItem> queue) {
-                    Log.d(TAG, "onQueueChanged");
-                }
-
-                @Override
-                public void onQueueTitleChanged(@Nullable CharSequence title) {
-                    Log.d(TAG, "onQueueTitleChanged");
-                }
-
-                @Override
-                public void onAudioInfoChanged(MediaController.PlaybackInfo info) {
-                    Log.d(TAG, "onAudioInfoChanged");
-                }
-            });
-            Log.d(TAG, "Registered CB");
+            if (catcherMediaController != null) {
+                Log.d(TAG, "Controller: " + catcherMediaController.toString());
+                //catcherMediaController.registerCallback(MainActivity.cb);
+                Log.d(TAG, "Registered CB");
+            }
         }
     }
 

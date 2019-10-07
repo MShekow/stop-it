@@ -123,7 +123,7 @@ public class AudioBroadcastReceiver extends BroadcastReceiver {
 
         IntentProcessor processor = this.getIntentProcessor(context, intent);
         if (processor != null) {
-            processor.process();
+            //processor.process(); FIXME
         }
     }
 
