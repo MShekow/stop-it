@@ -1,34 +1,19 @@
 package com.example.audiobookmark;
 
-import androidx.annotation.NonNull;
-import androidx.annotation.Nullable;
-import androidx.appcompat.app.AppCompatActivity;
-import androidx.appcompat.widget.Toolbar;
-import androidx.core.app.NotificationCompat;
-import androidx.lifecycle.Observer;
-import androidx.lifecycle.ViewModelProviders;
-import androidx.recyclerview.widget.DividerItemDecoration;
-import androidx.recyclerview.widget.LinearLayoutManager;
-import androidx.recyclerview.widget.RecyclerView;
-
-import android.app.Notification;
-import android.app.PendingIntent;
-import android.content.ComponentName;
-import android.content.Context;
 import android.content.Intent;
-import android.media.MediaMetadata;
-import android.media.session.MediaController;
-import android.media.session.MediaSession;
-import android.media.session.MediaSessionManager;
-import android.media.session.PlaybackState;
 import android.os.Bundle;
-import android.util.Log;
 import android.view.Menu;
 import android.view.MenuInflater;
 import android.view.MenuItem;
 import android.widget.Toast;
 
-import com.example.audiobookmark.receiver.AudioBroadcastReceiver;
+import androidx.appcompat.app.AppCompatActivity;
+import androidx.appcompat.widget.Toolbar;
+import androidx.lifecycle.Observer;
+import androidx.lifecycle.ViewModelProviders;
+import androidx.recyclerview.widget.DividerItemDecoration;
+import androidx.recyclerview.widget.LinearLayoutManager;
+import androidx.recyclerview.widget.RecyclerView;
 
 import java.util.List;
 
@@ -62,29 +47,9 @@ public class MainActivity extends AppCompatActivity {
             }
         });
 
-        Intent intent = new Intent(this, MediaCallbackService.class);
+        Intent intent = new Intent(this, MediaCallbackService.class)
+                .setAction(MediaCallbackService.START_ACTION);
         startService(intent);
-
-
-        if (false) {
-            MediaSessionManager mm = (MediaSessionManager) this.getSystemService(
-                    Context.MEDIA_SESSION_SERVICE);
-            List<MediaController> controllers = mm.getActiveSessions(
-                    new ComponentName(getApplicationContext(), NotificationListenerExampleService.class));
-            MediaController catcherMediaController = null;
-            for (MediaController controller : controllers) {
-                if (controller.getPackageName().contains("pocket")) {
-                    catcherMediaController = controller;
-                    break;
-                }
-            }
-
-            if (catcherMediaController != null) {
-                Log.d(TAG, "Controller: " + catcherMediaController.toString());
-                //catcherMediaController.registerCallback(MainActivity.cb);
-                Log.d(TAG, "Registered CB");
-            }
-        }
     }
 
     @Override
@@ -101,6 +66,11 @@ public class MainActivity extends AppCompatActivity {
             // action with ID action_refresh was selected
             case R.id.action_settings:
                 Toast.makeText(this, "Settings", Toast.LENGTH_SHORT).show();
+                /*
+                Example how to give task to service:
+                Intent intent = new Intent(this, MediaCallbackService.class)
+                        .setAction(MediaCallbackService.PLAY_ACTION);
+                startService(intent);*/
                 break;
             default:
                 break;
@@ -108,6 +78,4 @@ public class MainActivity extends AppCompatActivity {
 
         return true;
     }
-
-
 }

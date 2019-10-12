@@ -69,6 +69,13 @@ public class BookmarkListAdapter extends RecyclerView.Adapter<BookmarkListAdapte
                         intent.putExtra(Intent.EXTRA_REFERRER,
                                 Uri.parse("android-app://" + context.getPackageName()));
                         context.startActivity(intent);
+                    } else {
+                        Intent intent = new Intent(context, MediaCallbackService.class)
+                                .setAction(MediaCallbackService.PLAY_ACTION)
+                                .putExtra("package", currentBookmark.playerPackage)
+                                .putExtra("mediaid", currentBookmark.metadata)
+                                .putExtra("timestamp", currentBookmark.timestampSeconds);
+                        context.startService(intent);
                     }
                     Toast.makeText(BookmarkListAdapter.this.context, currentBookmark.track, Toast.LENGTH_SHORT).show();
                 }

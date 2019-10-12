@@ -1,48 +1,53 @@
 package com.example.audiobookmark;
 
 import android.app.Notification;
+import android.app.NotificationChannel;
+import android.app.NotificationManager;
 import android.app.PendingIntent;
 import android.app.Service;
 import android.content.ComponentName;
 import android.content.Context;
 import android.content.Intent;
+import android.media.AudioManager;
 import android.media.MediaMetadata;
-import android.media.browse.MediaBrowser;
+import android.media.MediaPlayer;
+import android.media.SoundPool;
 import android.media.session.MediaController;
-import android.media.session.MediaSession;
 import android.media.session.MediaSessionManager;
 import android.media.session.PlaybackState;
-import android.os.Bundle;
-import android.os.Handler;
-import android.os.HandlerThread;
+import android.os.Build;
 import android.os.IBinder;
-import android.os.Looper;
-import android.os.Message;
-import android.os.Process;
+import android.os.SystemClock;
+import android.os.Vibrator;
 import android.util.Log;
 
-import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
 import androidx.core.app.NotificationCompat;
 
 import java.util.HashMap;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 
 public class MediaCallbackService extends Service {
+    public static final String START_ACTION = "START_ACTION";
+    public static final String PLAY_ACTION = "PLAY_ACTION";
     static final String TAG = "MediaCallbackService";
     private static final int ONGOING_NOTIFICATION_ID = 21434;
     public static final String CHANNEL_ID = "MediaCallbackServiceChannel";
-    private static final boolean REGISTER_ON_SESSION_CHANGE = true;
-    private static final boolean REREGISTER_AT_END_OF_HANDLER = true;
-    private static final boolean REREGISTER_ONLY_NEW_PLAYERS = false;
+    private static final int THRESHOLD_MAX_MS = 2000;
+    private static final int THRESHOLD_MIN_MS = 500;
 
+    private Map<String, MediaController> controllers = new HashMap<>();
     private Map<String, MediaCB> callbacks = new HashMap<>();
-    private static long lastCbMs = 0;
-    private static boolean isJobScheduled = false;
-    private Looper serviceLooper;
-    private ServiceHandler serviceHandler;
-
+    private MediaSessionManager sessionManager = null;
+    private boolean initialized = false;
+    private long lastPauseTimestampMs = 0;
+    private AudioMetadata lastMetaData = null;
+    private BookmarkRepository repository = null;
+    private SoundPool shortPlayer;
+    private int beepSoundId = 0;
 
     private class MediaCB extends MediaController.Callback {
         private String packageName = null;
@@ -58,88 +63,29 @@ public class MediaCallbackService extends Service {
         }
 
         @Override
-        public void onSessionEvent(@NonNull String event, @Nullable Bundle extras) {
-            Log.d(TAG, "onSessionEvent " + event);
-        }
-
-        @Override
         public void onPlaybackStateChanged(@Nullable PlaybackState state) {
-            MediaCallbackService.lastCbMs = System.currentTimeMillis();
-            if (state.getState() != this.lastState) {
-                this.lastState = state.getState();
-            } else {
-                Log.d(TAG, "onPlaybackStateChanged - encountered duplicated state " + state.getState());
+            if (state == null) {
                 return;
             }
+
+            int newState = state.getState();
+            if (newState == lastState) {
+                return;
+            }
+            if (newState != PlaybackState.STATE_PAUSED && newState != PlaybackState.STATE_PLAYING) {
+                Log.d(TAG, "onPlaybackStateChanged: ignoring irrelevant state " + newState);
+                return;
+            }
+
+            Log.d(TAG, "pos " + state.getPosition() + " last updttime " + state.getLastPositionUpdateTime());
+            int timestampSeconds = (int) (state.getPosition() / 1000);
+            Log.d(TAG, "timestampSeconds " + timestampSeconds);
+            MediaController correspondingController = controllers.get(packageName);
+            processStateChange(newState, timestampSeconds, correspondingController);
+            lastState = newState;
             Log.d(TAG, "onPlaybackStateChanged " + state.getState());
-
-            if (!MediaCallbackService.isJobScheduled) {
-                MediaCallbackService.isJobScheduled = true;
-                Message msg = serviceHandler.obtainMessage();
-                msg.obj = MediaCB.this;
-                serviceHandler.sendMessage(msg);
-                Log.d(TAG, "Started background job");
-            }
-
-            /*Intent intent = new Intent(MediaCallbackService.this, MediaCallbackService.class);
-            MediaCallbackService.this.startService(intent);
-            Log.d(TAG, "Re-registered CB");*/
-        }
-
-        @Override
-        public void onMetadataChanged(@Nullable MediaMetadata metadata) {
-            Log.d(TAG, "onMetadataChanged");
-        }
-
-        @Override
-        public void onQueueChanged(@Nullable List<MediaSession.QueueItem> queue) {
-            Log.d(TAG, "onQueueChanged");
-        }
-
-        @Override
-        public void onQueueTitleChanged(@Nullable CharSequence title) {
-            Log.d(TAG, "onQueueTitleChanged");
-        }
-
-        @Override
-        public void onAudioInfoChanged(MediaController.PlaybackInfo info) {
-            Log.d(TAG, "onAudioInfoChanged");
         }
     }
-
-    ;
-
-    private final class ServiceHandler extends Handler {
-        public ServiceHandler(Looper looper) {
-            super(looper);
-        }
-
-        @Override
-        public void handleMessage(Message msg) {
-            MediaCB callback = (MediaCB) msg.obj;
-            final long DELAY_MS = 200;
-            while (true) {
-                try {
-                    Thread.sleep(DELAY_MS);
-                } catch (InterruptedException e) {
-                    Thread.currentThread().interrupt();
-                }
-                final long now = System.currentTimeMillis();
-                if ((now - DELAY_MS) > MediaCallbackService.lastCbMs) {
-                    Log.d(TAG, "Got out of the loop");
-                    break;
-                } else {
-                    Log.d(TAG, "Still too fresh, waiting again - " + MediaCallbackService.lastCbMs + " - " + now);
-                }
-            }
-            if (REREGISTER_AT_END_OF_HANDLER) {
-                registerCallback(callback.packageName, null);
-            }
-
-            MediaCallbackService.isJobScheduled = false;
-        }
-    }
-
 
     public MediaCallbackService() {
     }
@@ -151,27 +97,68 @@ public class MediaCallbackService extends Service {
 
     @Override
     public int onStartCommand(Intent intent, int flags, int startId) {
-        Log.d(TAG, "onStartCommand");
-        MediaSessionManager mm = (MediaSessionManager) this.getSystemService(
-                Context.MEDIA_SESSION_SERVICE);
-        List<MediaController> controllers = mm.getActiveSessions(
-                new ComponentName(getApplicationContext(), NotificationListenerExampleService.class));
-        this.registerCallbacks(controllers);
+        if (intent == null) {
+            Log.d(TAG, "onStartCommand(): Warning: intent was null, DAFUQ!");
+            return START_STICKY;
+        }
 
-        Intent notificationIntent = new Intent(this, MainActivity.class);
-        PendingIntent pendingIntent =
-                PendingIntent.getActivity(this, 0, notificationIntent, 0);
+        if (intent.getAction() == null) {
+            Log.d(TAG, "onStartCommand(): Warning: intent without action!");
+            return START_STICKY;
+        }
 
-        Notification notification =
-                new NotificationCompat.Builder(this, CHANNEL_ID)
-                        .setContentTitle(getText(R.string.notification_title))
-                        .setContentText(getText(R.string.notification_message))
-                        //.setSmallIcon(R.drawable.icon)
-                        .setContentIntent(pendingIntent)
-                        //.setTicker(getText(R.string.ticker_text))
-                        .build();
+        Log.d(TAG, "onStartCommand " + intent.getAction());
+        if (intent.getAction().equals(MediaCallbackService.START_ACTION)) {
+            if (this.initialized) {
+                Log.d(TAG, "returning, already initialized!");
+                return START_STICKY;
+            }
 
-        startForeground(ONGOING_NOTIFICATION_ID, notification);
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
+                NotificationChannel chan = new NotificationChannel(CHANNEL_ID,
+                        "StopIt Service", NotificationManager.IMPORTANCE_NONE);
+                NotificationManager manager = (NotificationManager) getSystemService(Context.NOTIFICATION_SERVICE);
+                assert manager != null;
+                manager.createNotificationChannel(chan);
+            }
+
+            Intent notificationIntent = new Intent(this, MainActivity.class);
+            PendingIntent pendingIntent =
+                    PendingIntent.getActivity(this, 0, notificationIntent, 0);
+
+            Notification notification =
+                    new NotificationCompat.Builder(this, CHANNEL_ID)
+                            .setContentTitle(getText(R.string.notification_title))
+                            .setContentText(getText(R.string.notification_message))
+                            .setSmallIcon(R.drawable.ic_settings_black_24dp)
+                            .setContentIntent(pendingIntent)
+                            .setTicker("Some ticker text")
+                            .setChannelId(CHANNEL_ID)
+                            .build();
+
+            startForeground(ONGOING_NOTIFICATION_ID, notification);
+
+            registerAllCallbacks();
+
+            this.initialized = true;
+        } else if (intent.getAction().equals(MediaCallbackService.PLAY_ACTION)) {
+            // TODO build a whitelist of players where we know this works, and then also do the
+            // seeking a bit later, as it won't have any effect if done immediately AND switching a
+            // track
+
+            String packageName = intent.getStringExtra("package");
+            if (controllers.containsKey(packageName)) {
+                String mediaId = intent.getStringExtra("mediaid");
+                if (mediaId != null) {
+                    MediaController controller = controllers.get(packageName);
+                    MediaController.TransportControls controls = controller.getTransportControls();
+                    controls.playFromMediaId(mediaId, null);
+                    int timestampSeconds = intent.getIntExtra("timestamp", 0);
+                    controls.seekTo(1000 * timestampSeconds);
+                    Log.d(TAG, "Play action executed!" + mediaId);
+                }
+            }
+        }
 
 
         // If we get killed, after returning from here, restart
@@ -180,74 +167,160 @@ public class MediaCallbackService extends Service {
 
     @Override
     public void onCreate() {
-        // Start up the thread running the service. Note that we create a
-        // separate thread because the service normally runs in the process's
-        // main thread, which we don't want to block. We also make it
-        // background priority so CPU-intensive work doesn't disrupt our UI.
-        HandlerThread thread = new HandlerThread("MediaCBHandlerThread",
-                Process.THREAD_PRIORITY_BACKGROUND);
-        thread.start();
-
-        // Get the HandlerThread's Looper and use it for our Handler
-        serviceLooper = thread.getLooper();
-        serviceHandler = new ServiceHandler(serviceLooper);
-
-        MediaSessionManager mm = (MediaSessionManager) this.getSystemService(
-                Context.MEDIA_SESSION_SERVICE);
-        mm.addOnActiveSessionsChangedListener(new MediaSessionManager.OnActiveSessionsChangedListener() {
+        repository = new BookmarkRepository(getApplicationContext());
+        shortPlayer = new SoundPool.Builder().setMaxStreams(10).build();
+        /*shortPlayer.setOnLoadCompleteListener(new SoundPool.OnLoadCompleteListener() {
+            @Override
+            public void onLoadComplete(SoundPool soundPool, int sampleId,
+                                       int status) {
+                Log.d(TAG, "Load complete " + sampleId + " " + status);
+            }
+        });*/
+        beepSoundId = shortPlayer.load(this, R.raw.beepogg, 1);
+        sessionManager = (MediaSessionManager) this.getSystemService(Context.MEDIA_SESSION_SERVICE);
+        sessionManager.addOnActiveSessionsChangedListener(new MediaSessionManager.OnActiveSessionsChangedListener() {
             @Override
             public void onActiveSessionsChanged(@Nullable List<MediaController> controllers) {
+                if (controllers == null) {
+                    return;
+                }
+
                 Log.d(TAG, "onActiveSessionsChanged():");
+                Set<String> newPackageNames = new HashSet<>();
                 for (MediaController c : controllers) {
                     Log.d(TAG, c.getPackageName() + " " + c.getSessionToken().toString());
+                    newPackageNames.add(c.getPackageName());
                 }
-                if (REGISTER_ON_SESSION_CHANGE) {
-                    registerCallbacks(controllers);
+
+                // Unregister the ones we no longer need
+                if (controllers.isEmpty()) {
+                    unregisterAllCallbacks();
+                } else {
+                    // Note: we make a COPY of the keySet to avoid a ConcurrentModificationException
+                    for (String packageName : MediaCallbackService.this.controllers.keySet().toArray(new String[0])) {
+                        if (!newPackageNames.contains(packageName)) {
+                            unregisterCallback(packageName);
+                        }
+                    }
+                }
+
+                // Register those we haven't registered yet
+                for (MediaController c : controllers) {
+                    if (!MediaCallbackService.this.controllers.containsKey(c.getPackageName())) {
+                        registerCallback(c);
+                    }
                 }
             }
         }, new ComponentName(getApplicationContext(), NotificationListenerExampleService.class));
     }
 
+    @Override
+    public void onDestroy() {
+        unregisterAllCallbacks();
+        super.onDestroy();
+    }
 
-    private void registerCallbacks(List<MediaController> controllers) {
-        for (MediaController controller : controllers) {
-            MediaSession.Token test = controller.getSessionToken();
-            Log.d(TAG, "registerCallbacks(): controller " + controller.getPackageName() + " " + test.toString());
-            if (REREGISTER_ONLY_NEW_PLAYERS && callbacks.containsKey(controller.getPackageName())) {
-                Log.d(TAG, "registerCallbacks(): skipping registration of KNOWN player" + controller.getPackageName());
-                continue;
-            }
-            registerCallback(controller.getPackageName(), controller);
+    private void unregisterAllCallbacks() {
+        // Note: we make a COPY of the keySet to avoid a ConcurrentModificationException
+        for (String packageName : controllers.keySet().toArray(new String[0])) {
+            this.unregisterCallback(packageName);
         }
     }
 
-    private void registerCallback(String packageName, MediaController controller) {
-        MediaCB callback = null;
-        if (this.callbacks.containsKey(packageName)) {
-            callback = this.callbacks.get(packageName);
-        } else {
-            callback = new MediaCB(packageName);
-            this.callbacks.put(packageName, callback);
+    private void registerAllCallbacks() {
+        List<MediaController> controllers = sessionManager.getActiveSessions(
+                new ComponentName(this, NotificationListenerExampleService.class));
+        for (MediaController controller : controllers) {
+            registerCallback(controller);
+        }
+    }
+
+    private void unregisterCallback(String packageName) {
+        if (controllers.containsKey(packageName)) {
+            MediaController controller = controllers.get(packageName);
+            Log.d(TAG, "Unregistering controller callback for " + packageName);
+            controller.unregisterCallback(callbacks.get(packageName));
+            controllers.remove(packageName);
+            callbacks.remove(packageName);
+        }
+    }
+
+    private void registerCallback(MediaController controller) {
+        MediaCB callback = new MediaCB(controller.getPackageName());
+        MediaController ownController = new MediaController(getApplicationContext(),
+                controller.getSessionToken());
+        ownController.registerCallback(callback);
+        controllers.put(controller.getPackageName(), ownController);
+        callbacks.put(controller.getPackageName(), callback);
+        Log.d(TAG, "Registered new controller callback " + controller.getPackageName());
+    }
+
+    private void processStateChange(int newState, int timestampSeconds, MediaController controller) {
+        MediaMetadata mediaMetadata = controller.getMetadata();
+        if (mediaMetadata == null) {
+            Log.e(TAG, "processStateChange(): Unable to get metadata (null was returned)");
+            return;
         }
 
-        if (controller == null) {
-            MediaSessionManager mm = (MediaSessionManager) this.getSystemService(
-                    Context.MEDIA_SESSION_SERVICE);
-            List<MediaController> controllers = mm.getActiveSessions(
-                    new ComponentName(getApplicationContext(), NotificationListenerExampleService.class));
-            for (MediaController c : controllers) {
-                if (c.getPackageName().equals(packageName)) {
-                    controller = c;
-                    break;
+        String artist = mediaMetadata.getString(MediaMetadata.METADATA_KEY_ARTIST);
+        String album = mediaMetadata.getString(MediaMetadata.METADATA_KEY_ALBUM);
+        String track = mediaMetadata.getString(MediaMetadata.METADATA_KEY_TITLE);
+
+        AudioMetadata metaData = new AudioMetadata(artist, album, track);
+
+        if (newState == PlaybackState.STATE_PAUSED) {
+            lastPauseTimestampMs = SystemClock.elapsedRealtime();
+            lastMetaData = metaData;
+        } else {
+            if (!metaData.equals(lastMetaData)) {
+                Log.d(TAG, "Current: " + metaData.toString());
+                if (lastMetaData == null) {
+                    Log.d(TAG, "Old: null");
+                } else {
+                    Log.d(TAG, "Old: " + lastMetaData.toString());
                 }
+                return;
             }
 
+            Log.d(TAG, "Play = True. Last TS: " + lastPauseTimestampMs);
+            long currentTimeMs = SystemClock.elapsedRealtime();
+            long difference = currentTimeMs - lastPauseTimestampMs;
+            if (difference < THRESHOLD_MIN_MS) {
+                Log.d(TAG, "Discarding event " + track + " - difference is too small: " + difference);
+                return;
+            }
+            if (difference < THRESHOLD_MAX_MS) {
+                Log.d(TAG, "Triggered event: " + track);
+                Bookmark bookmark = new Bookmark();
+                bookmark.createdAt = System.currentTimeMillis();
+                bookmark.artist = artist;
+                bookmark.album = album;
+                bookmark.track = track;
+                bookmark.timestampSeconds = timestampSeconds;
+                bookmark.playerPackage = controller.getPackageName();
+                bookmark.metadata = mediaMetadata.getString(MediaMetadata.METADATA_KEY_MEDIA_ID);
+                repository.insert(bookmark);
+                //MediaPlayer mediaPlayer = MediaPlayer.create(getApplicationContext(), R.raw.beep);
+                //mediaPlayer.start();
+                playBeepSound();
+            } else {
+                Log.d(TAG, "Difference too large: " + difference);
+            }
         }
+    }
 
-        if (controller != null) {
-            controller.unregisterCallback(callback);
-            controller.registerCallback(callback);
-            Log.d(TAG, "(Re) registered CB for controller: " + controller.toString() + " " + packageName);
+    private void playBeepSound() {
+        AudioManager audioManager = (AudioManager) getSystemService(AUDIO_SERVICE);
+        float actualVolume = (float) audioManager
+                .getStreamVolume(AudioManager.STREAM_MUSIC);
+        float maxVolume = (float) audioManager
+                .getStreamMaxVolume(AudioManager.STREAM_MUSIC);
+        float volume = actualVolume / maxVolume;
+        shortPlayer.play(beepSoundId, volume, volume, 1, 0, 1f);
+
+        Vibrator vibrator = (Vibrator) getSystemService(Context.VIBRATOR_SERVICE);
+        if (vibrator.hasVibrator()) {
+            vibrator.vibrate(500); // for 500 ms
         }
     }
 }
