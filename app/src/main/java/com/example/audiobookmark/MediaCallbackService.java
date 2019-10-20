@@ -38,6 +38,7 @@ public class MediaCallbackService extends Service {
     public static final String CHANNEL_ID = "MediaCallbackServiceChannel";
     private static final int THRESHOLD_MAX_MS = 2000;
     private static final int THRESHOLD_MIN_MS = 500;
+    private static final int THRESHOLD_NOTIFICATION_MS = 2000;
 
     private Map<String, MediaController> controllers = new HashMap<>();
     private Map<String, MediaCB> callbacks = new HashMap<>();
@@ -227,7 +228,7 @@ public class MediaCallbackService extends Service {
                     }
                 }
             }
-        }, new ComponentName(getApplicationContext(), NotificationListenerExampleService.class));
+        }, new ComponentName(getApplicationContext(), StopitNotificationListenerService.class));
     }
 
     @Override
@@ -246,7 +247,7 @@ public class MediaCallbackService extends Service {
 
     private void registerAllCallbacks() {
         List<MediaController> controllers = sessionManager.getActiveSessions(
-                new ComponentName(this, NotificationListenerExampleService.class));
+                new ComponentName(this, StopitNotificationListenerService.class));
         for (MediaController controller : controllers) {
             registerCallback(controller);
         }
@@ -317,6 +318,13 @@ public class MediaCallbackService extends Service {
                 Log.d(TAG, "Discarding event " + metaData.track + " - difference is too small: " + difference);
                 return;
             }
+
+            if (hasRecentNotificationHappened(currentTimeMs, controller.getPackageName())) {
+                Log.d(TAG, "Discarding event " + metaData.track + " - there recently " +
+                        "was a notification!");
+                return;
+            }
+
             if (difference < THRESHOLD_MAX_MS) {
                 Log.d(TAG, "Triggered event: " + metaData.track);
                 Bookmark bookmark = new Bookmark();
@@ -333,6 +341,20 @@ public class MediaCallbackService extends Service {
                 Log.d(TAG, "Difference too large: " + difference);
             }
         }
+    }
+
+    private boolean hasRecentNotificationHappened(long currentTimeMs, String ignoredPackageName) {
+        for (String packageName : StopitNotificationListenerService.lastNotificationTimestampsMs.keySet()) {
+            if (packageName.equals(ignoredPackageName)) continue;
+
+            long notificationTimeDiff = currentTimeMs - StopitNotificationListenerService.lastNotificationTimestampsMs.get(packageName);
+            if (notificationTimeDiff < THRESHOLD_NOTIFICATION_MS) {
+                return true;
+            } else {
+                Log.d(TAG, "hasRecentNotificationHappened(" + packageName + "): ignored, diff was " + notificationTimeDiff);
+            }
+        }
+        return false;
     }
 
     private AudioMetadata getAudioMetadataFromMediaMetadata(MediaMetadata mediaMetadata) {

@@ -33,7 +33,7 @@
         </receiver>
 
         <service
-            android:name=".NotificationListenerExampleService"
+            android:name=".StopitNotificationListenerService"
             android:label="AudioBookmarkService"
             android:permission="android.permission.BIND_NOTIFICATION_LISTENER_SERVICE">
             <intent-filter>

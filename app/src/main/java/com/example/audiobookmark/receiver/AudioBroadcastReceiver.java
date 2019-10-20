@@ -15,7 +15,7 @@ import android.util.Log;
 import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
 
-import com.example.audiobookmark.NotificationListenerExampleService;
+import com.example.audiobookmark.StopitNotificationListenerService;
 import com.example.audiobookmark.receiver.impl.DoggcatcherIntentProcessor;
 import com.example.audiobookmark.receiver.impl.SpotifyIntentProcessor;
 
@@ -50,7 +50,7 @@ public class AudioBroadcastReceiver extends BroadcastReceiver {
             MediaSessionManager mm = (MediaSessionManager) context.getSystemService(
                     Context.MEDIA_SESSION_SERVICE);
             List<MediaController> controllers = mm.getActiveSessions(
-                    new ComponentName(context, NotificationListenerExampleService.class));
+                    new ComponentName(context, StopitNotificationListenerService.class));
             MediaController doggCatcherMediaController = null;
             for (MediaController controller : controllers) {
                 if (controller.getPackageName().contains("spotify")) {
@@ -79,7 +79,7 @@ public class AudioBroadcastReceiver extends BroadcastReceiver {
                         MediaSessionManager mm = (MediaSessionManager) test.getSystemService(
                                 Context.MEDIA_SESSION_SERVICE);
                         List<MediaController> controllers = mm.getActiveSessions(
-                                new ComponentName(test, NotificationListenerExampleService.class));
+                                new ComponentName(test, StopitNotificationListenerService.class));
                         MediaController doggCatcherMediaController = null;
                         for (MediaController controller : controllers) {
                             if (controller.getPackageName().contains("spotify")) {

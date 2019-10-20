@@ -6,10 +6,9 @@ import android.content.Intent;
 import android.media.session.MediaController;
 import android.media.session.MediaSessionManager;
 import android.media.session.PlaybackState;
-import android.os.Bundle;
 import android.util.Log;
 
-import com.example.audiobookmark.NotificationListenerExampleService;
+import com.example.audiobookmark.StopitNotificationListenerService;
 import com.example.audiobookmark.receiver.IntentProcessor;
 
 import java.util.List;
@@ -34,7 +33,7 @@ public class DoggcatcherIntentProcessor extends IntentProcessor {
         MediaSessionManager mm = (MediaSessionManager) context.getSystemService(
                 Context.MEDIA_SESSION_SERVICE);
         List<MediaController> controllers = mm.getActiveSessions(
-                new ComponentName(context, NotificationListenerExampleService.class));
+                new ComponentName(context, StopitNotificationListenerService.class));
         MediaController doggCatcherMediaController = null;
         for (MediaController controller : controllers) {
             if (controller.getPackageName().contains("doggcatcher")) {
