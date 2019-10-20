@@ -9,8 +9,8 @@ import android.content.ComponentName;
 import android.content.Context;
 import android.content.Intent;
 import android.media.AudioManager;
+import android.media.MediaDescription;
 import android.media.MediaMetadata;
-import android.media.MediaPlayer;
 import android.media.SoundPool;
 import android.media.session.MediaController;
 import android.media.session.MediaSessionManager;
@@ -50,16 +50,24 @@ public class MediaCallbackService extends Service {
     private int beepSoundId = 0;
 
     private class MediaCB extends MediaController.Callback {
-        private String packageName = null;
+        private String packageAndSessionName;
         private int lastState = -1;
+        private AudioMetadata cachedMetadata = null;
+        private String cachedMediaId = null;
 
-        public MediaCB(String packageName) {
-            this.packageName = packageName;
+        MediaCB(String packageAndSessionName) {
+            this.packageAndSessionName = packageAndSessionName;
+        }
+
+        public void updateCachedMetadata(AudioMetadata metadata, String mediaId) {
+            this.cachedMetadata = metadata;
+            this.cachedMediaId = mediaId;
         }
 
         @Override
         public void onSessionDestroyed() {
             Log.d(TAG, "onSessionDestroyed");
+            unregisterCallback(packageAndSessionName);
         }
 
         @Override
@@ -80,10 +88,19 @@ public class MediaCallbackService extends Service {
             Log.d(TAG, "pos " + state.getPosition() + " last updttime " + state.getLastPositionUpdateTime());
             int timestampSeconds = (int) (state.getPosition() / 1000);
             Log.d(TAG, "timestampSeconds " + timestampSeconds);
-            MediaController correspondingController = controllers.get(packageName);
-            processStateChange(newState, timestampSeconds, correspondingController);
+            MediaController correspondingController = controllers.get(packageAndSessionName);
+            processStateChange(newState, timestampSeconds, correspondingController, this);
             lastState = newState;
             Log.d(TAG, "onPlaybackStateChanged " + state.getState());
+        }
+
+        @Override
+        public void onMetadataChanged(@Nullable MediaMetadata metadata) {
+            if (metadata != null) {
+                cachedMetadata = getAudioMetadataFromMediaMetadata(metadata);
+                cachedMediaId = metadata.getString(MediaMetadata.METADATA_KEY_MEDIA_ID);
+                Log.d(TAG, "onMetadataChanged " + cachedMetadata + " ID: " + cachedMediaId);
+            }
         }
     }
 
@@ -145,17 +162,23 @@ public class MediaCallbackService extends Service {
             // TODO build a whitelist of players where we know this works, and then also do the
             // seeking a bit later, as it won't have any effect if done immediately AND switching a
             // track
+            // For instance, for Pocket Casts, searching by ID works fine
+            // But for Cast Box, only playFromSearch() works
 
             String packageName = intent.getStringExtra("package");
-            if (controllers.containsKey(packageName)) {
-                String mediaId = intent.getStringExtra("mediaid");
-                if (mediaId != null) {
-                    MediaController controller = controllers.get(packageName);
-                    MediaController.TransportControls controls = controller.getTransportControls();
-                    controls.playFromMediaId(mediaId, null);
-                    int timestampSeconds = intent.getIntExtra("timestamp", 0);
-                    controls.seekTo(1000 * timestampSeconds);
-                    Log.d(TAG, "Play action executed!" + mediaId);
+            for (String packageAndSessionName : controllers.keySet()) {
+                if (packageAndSessionName.startsWith(packageName)) {
+                    // Simply try the first matching controller
+                    String mediaId = intent.getStringExtra("mediaid");
+                    if (mediaId != null) {
+                        MediaController controller = controllers.get(packageAndSessionName);
+                        MediaController.TransportControls controls = controller.getTransportControls();
+                        controls.playFromMediaId(mediaId, null);
+                        int timestampSeconds = intent.getIntExtra("timestamp", 0);
+                        controls.seekTo(1000 * timestampSeconds);
+                        Log.d(TAG, "Play action executed!" + mediaId);
+                    }
+                    break;
                 }
             }
         }
@@ -169,13 +192,6 @@ public class MediaCallbackService extends Service {
     public void onCreate() {
         repository = new BookmarkRepository(getApplicationContext());
         shortPlayer = new SoundPool.Builder().setMaxStreams(10).build();
-        /*shortPlayer.setOnLoadCompleteListener(new SoundPool.OnLoadCompleteListener() {
-            @Override
-            public void onLoadComplete(SoundPool soundPool, int sampleId,
-                                       int status) {
-                Log.d(TAG, "Load complete " + sampleId + " " + status);
-            }
-        });*/
         beepSoundId = shortPlayer.load(this, R.raw.beepogg, 1);
         sessionManager = (MediaSessionManager) this.getSystemService(Context.MEDIA_SESSION_SERVICE);
         sessionManager.addOnActiveSessionsChangedListener(new MediaSessionManager.OnActiveSessionsChangedListener() {
@@ -188,8 +204,8 @@ public class MediaCallbackService extends Service {
                 Log.d(TAG, "onActiveSessionsChanged():");
                 Set<String> newPackageNames = new HashSet<>();
                 for (MediaController c : controllers) {
-                    Log.d(TAG, c.getPackageName() + " " + c.getSessionToken().toString());
-                    newPackageNames.add(c.getPackageName());
+                    Log.d(TAG, getPackageAndSessionName(c));
+                    newPackageNames.add(getPackageAndSessionName(c));
                 }
 
                 // Unregister the ones we no longer need
@@ -197,16 +213,16 @@ public class MediaCallbackService extends Service {
                     unregisterAllCallbacks();
                 } else {
                     // Note: we make a COPY of the keySet to avoid a ConcurrentModificationException
-                    for (String packageName : MediaCallbackService.this.controllers.keySet().toArray(new String[0])) {
-                        if (!newPackageNames.contains(packageName)) {
-                            unregisterCallback(packageName);
+                    for (String packageAndSessionName : MediaCallbackService.this.controllers.keySet().toArray(new String[0])) {
+                        if (!newPackageNames.contains(packageAndSessionName)) {
+                            unregisterCallback(packageAndSessionName);
                         }
                     }
                 }
 
                 // Register those we haven't registered yet
                 for (MediaController c : controllers) {
-                    if (!MediaCallbackService.this.controllers.containsKey(c.getPackageName())) {
+                    if (!MediaCallbackService.this.controllers.containsKey(getPackageAndSessionName(c))) {
                         registerCallback(c);
                     }
                 }
@@ -217,13 +233,14 @@ public class MediaCallbackService extends Service {
     @Override
     public void onDestroy() {
         unregisterAllCallbacks();
+        shortPlayer.release();
         super.onDestroy();
     }
 
     private void unregisterAllCallbacks() {
         // Note: we make a COPY of the keySet to avoid a ConcurrentModificationException
-        for (String packageName : controllers.keySet().toArray(new String[0])) {
-            this.unregisterCallback(packageName);
+        for (String packageAndSessionName : controllers.keySet().toArray(new String[0])) {
+            this.unregisterCallback(packageAndSessionName);
         }
     }
 
@@ -235,43 +252,54 @@ public class MediaCallbackService extends Service {
         }
     }
 
-    private void unregisterCallback(String packageName) {
-        if (controllers.containsKey(packageName)) {
-            MediaController controller = controllers.get(packageName);
-            Log.d(TAG, "Unregistering controller callback for " + packageName);
-            controller.unregisterCallback(callbacks.get(packageName));
-            controllers.remove(packageName);
-            callbacks.remove(packageName);
+    private void unregisterCallback(String packageAndSessionName) {
+        if (controllers.containsKey(packageAndSessionName)) {
+            MediaController controller = controllers.get(packageAndSessionName);
+            Log.d(TAG, "Unregistering controller callback for " + packageAndSessionName);
+            controller.unregisterCallback(callbacks.get(packageAndSessionName));
+            controllers.remove(packageAndSessionName);
+            callbacks.remove(packageAndSessionName);
         }
     }
 
     private void registerCallback(MediaController controller) {
-        MediaCB callback = new MediaCB(controller.getPackageName());
         MediaController ownController = new MediaController(getApplicationContext(),
                 controller.getSessionToken());
+        MediaCB callback = new MediaCB(getPackageAndSessionName(controller));
         ownController.registerCallback(callback);
-        controllers.put(controller.getPackageName(), ownController);
-        callbacks.put(controller.getPackageName(), callback);
-        Log.d(TAG, "Registered new controller callback " + controller.getPackageName());
+        controllers.put(getPackageAndSessionName(controller), ownController);
+        callbacks.put(getPackageAndSessionName(controller), callback);
+        Log.d(TAG, "Registered new controller callback " + getPackageAndSessionName(controller));
+        MediaMetadata mediaMetadata = controller.getMetadata();
+        if (mediaMetadata != null) {
+            String mediaId = mediaMetadata.getString(MediaMetadata.METADATA_KEY_MEDIA_ID);
+            callback.updateCachedMetadata(getAudioMetadataFromMediaMetadata(mediaMetadata), mediaId);
+        }
     }
 
-    private void processStateChange(int newState, int timestampSeconds, MediaController controller) {
+    private void processStateChange(int newState, int timestampSeconds, MediaController controller, MediaCB callback) {
+        AudioMetadata metaData;
+        String mediaId = null;
         MediaMetadata mediaMetadata = controller.getMetadata();
         if (mediaMetadata == null) {
-            Log.e(TAG, "processStateChange(): Unable to get metadata (null was returned)");
-            return;
+            Log.e(TAG, "processStateChange(): Unable to get metadata (null was returned), " +
+                    "using cached one instead");
+            metaData = callback.cachedMetadata;
+            mediaId = callback.cachedMediaId;
+        } else {
+            metaData = getAudioMetadataFromMediaMetadata(mediaMetadata);
+            mediaId = mediaMetadata.getString(MediaMetadata.METADATA_KEY_MEDIA_ID);
         }
-
-        String artist = mediaMetadata.getString(MediaMetadata.METADATA_KEY_ARTIST);
-        String album = mediaMetadata.getString(MediaMetadata.METADATA_KEY_ALBUM);
-        String track = mediaMetadata.getString(MediaMetadata.METADATA_KEY_TITLE);
-
-        AudioMetadata metaData = new AudioMetadata(artist, album, track);
 
         if (newState == PlaybackState.STATE_PAUSED) {
             lastPauseTimestampMs = SystemClock.elapsedRealtime();
             lastMetaData = metaData;
         } else {
+            if (lastMetaData == null) {
+                Log.d(TAG, "Warning: lastMetaData is null!");
+                return;
+            }
+
             if (!metaData.equals(lastMetaData)) {
                 Log.d(TAG, "Current: " + metaData.toString());
                 if (lastMetaData == null) {
@@ -286,27 +314,40 @@ public class MediaCallbackService extends Service {
             long currentTimeMs = SystemClock.elapsedRealtime();
             long difference = currentTimeMs - lastPauseTimestampMs;
             if (difference < THRESHOLD_MIN_MS) {
-                Log.d(TAG, "Discarding event " + track + " - difference is too small: " + difference);
+                Log.d(TAG, "Discarding event " + metaData.track + " - difference is too small: " + difference);
                 return;
             }
             if (difference < THRESHOLD_MAX_MS) {
-                Log.d(TAG, "Triggered event: " + track);
+                Log.d(TAG, "Triggered event: " + metaData.track);
                 Bookmark bookmark = new Bookmark();
                 bookmark.createdAt = System.currentTimeMillis();
-                bookmark.artist = artist;
-                bookmark.album = album;
-                bookmark.track = track;
+                bookmark.artist = metaData.artist;
+                bookmark.album = metaData.album;
+                bookmark.track = metaData.track;
                 bookmark.timestampSeconds = timestampSeconds;
                 bookmark.playerPackage = controller.getPackageName();
-                bookmark.metadata = mediaMetadata.getString(MediaMetadata.METADATA_KEY_MEDIA_ID);
+                bookmark.metadata = mediaId;
                 repository.insert(bookmark);
-                //MediaPlayer mediaPlayer = MediaPlayer.create(getApplicationContext(), R.raw.beep);
-                //mediaPlayer.start();
                 playBeepSound();
             } else {
                 Log.d(TAG, "Difference too large: " + difference);
             }
         }
+    }
+
+    private AudioMetadata getAudioMetadataFromMediaMetadata(MediaMetadata mediaMetadata) {
+        String artist = mediaMetadata.getString(MediaMetadata.METADATA_KEY_ARTIST);
+        String album = mediaMetadata.getString(MediaMetadata.METADATA_KEY_ALBUM);
+        String track = mediaMetadata.getString(MediaMetadata.METADATA_KEY_TITLE);
+
+        if (artist == null && album != null) {
+            artist = album;
+        } else if (artist == null && album == null) {
+            MediaDescription description = mediaMetadata.getDescription();
+            if (description.getSubtitle() != null) artist = description.getSubtitle().toString();
+        }
+
+        return new AudioMetadata(artist, album, track);
     }
 
     private void playBeepSound() {
@@ -322,5 +363,10 @@ public class MediaCallbackService extends Service {
         if (vibrator.hasVibrator()) {
             vibrator.vibrate(500); // for 500 ms
         }
+    }
+
+    private String getPackageAndSessionName(MediaController controller) {
+        return controller.getPackageName() + "-"
+                + Integer.toHexString(controller.getSessionToken().hashCode());
     }
 }

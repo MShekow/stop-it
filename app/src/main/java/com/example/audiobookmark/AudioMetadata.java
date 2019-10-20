@@ -18,9 +18,26 @@ public class AudioMetadata {
         if (this == o) return true;
         if (o == null || getClass() != o.getClass()) return false;
         AudioMetadata that = (AudioMetadata) o;
-        return artist.equals(that.artist) &&
-                album.equals(that.album) &&
-                track.equals(that.track);
+
+        if (artist == null) {
+            if (that.artist != null) return false;
+        } else {
+            if (!artist.equals(that.artist)) return false;
+        }
+
+        if (album == null) {
+            if (that.album != null) return false;
+        } else {
+            if (!album.equals(that.album)) return false;
+        }
+
+        if (track == null) {
+            if (that.track != null) return false;
+        } else {
+            if (!track.equals(that.track)) return false;
+        }
+
+        return true;
     }
 
     @Override
