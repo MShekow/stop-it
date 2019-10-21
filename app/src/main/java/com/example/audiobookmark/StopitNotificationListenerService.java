@@ -41,4 +41,13 @@ public class StopitNotificationListenerService extends NotificationListenerServi
         lastNotificationTimestampsMs.put(sbn.getPackageName(), SystemClock.elapsedRealtime());
         Log.d(TAG, "onNotificationPosted(): updated timestamp! " + sbn.getPackageName());
     }
+
+    @Override
+    public void onListenerConnected() {
+        super.onListenerConnected();
+        // This method is called when the user enables the Notification access in the settings!
+        // But it is also called in other occasions, and also if it was already enabled
+        // Thus we have to consider it with care!
+        Log.d(TAG, "onListenerConnected()");
+    }
 }

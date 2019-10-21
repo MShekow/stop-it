@@ -1,0 +1,12 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="key_service_state">service_state</string>
+    <string name="key_pause_play_min_delay_millis">pause_play_min_delay_millis</string>
+    <string name="key_reinit_service">reinit_service</string>
+    <string name="key_enable_foreground">enable_foreground</string>
+    <string name="key_pause_play_max_delay_millis">pause_play_max_delay_millis</string>
+    <string name="key_pause_play_notification_lookback">pause_play_notification_lookback</string>
+    <string name="key_vibrate">vibrate</string>
+    <string name="key_vibrate_duration">vibrate_duration</string>
+    <string name="key_play_sound">play_sound</string>
+</resources>

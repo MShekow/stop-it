@@ -3,7 +3,6 @@
     package="com.example.audiobookmark">
 
     <uses-permission android:name="android.permission.FOREGROUND_SERVICE" />
-
     <uses-permission android:name="android.permission.VIBRATE" />
 
     <application
@@ -13,8 +12,12 @@
         android:roundIcon="@mipmap/ic_launcher_round"
         android:supportsRtl="true"
         android:theme="@style/AppTheme">
-
-        <activity android:name=".MainActivity" android:launchMode="singleTask">
+        <activity
+            android:name=".SettingsActivity"
+            android:label="@string/title_activity_settings"></activity>
+        <activity
+            android:name=".MainActivity"
+            android:launchMode="singleTask">
             <intent-filter>
                 <action android:name="android.intent.action.MAIN" />
 
@@ -22,29 +25,18 @@
             </intent-filter>
         </activity>
 
-        <receiver
-            android:name=".receiver.AudioBroadcastReceiver"
-            android:enabled="true"
-            android:exported="true">
-            <intent-filter>
-                <action android:name="com.android.music.playstatechanged" />
-                <action android:name="com.spotify.music.playbackstatechanged" />
-            </intent-filter>
-        </receiver>
-
         <service
             android:name=".StopitNotificationListenerService"
-            android:label="AudioBookmarkService"
+            android:label="Audio Bookmark Service"
             android:permission="android.permission.BIND_NOTIFICATION_LISTENER_SERVICE">
             <intent-filter>
                 <action android:name="android.service.notification.NotificationListenerService" />
             </intent-filter>
         </service>
-
         <service
             android:name=".MediaCallbackService"
             android:enabled="true"
-            android:exported="false"></service>
+            android:exported="false" />
     </application>
 
 </manifest>

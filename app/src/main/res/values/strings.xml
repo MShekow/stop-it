@@ -1,7 +1,48 @@
 <resources>
     <string name="app_name">Stop It!</string>
     <string name="action_settings">Settings</string>
-    <string name="button_save">Save</string>
     <string name="notification_title">StopIt!</string>
-    <string name="notification_message">Service is active</string>
+    <string name="notification_message">Ready to create audio bookmarks</string>
+    <string name="title_activity_settings">Settings</string>
+
+    <!-- Preference categories -->
+    <string name="service_header">Background service</string>
+    <string name="bookmark_header">Action on bookmark creation</string>
+
+    <!-- Service preferences -->
+    <string name="permissions_title">Permission state</string>
+    <string name="service_state">Service state</string>
+    <string name="permission_required">Notification access not granted yet. Click to open the
+        Android system settings where you need to grant notification access to
+        "Audio Bookmark Service"</string>
+    <string name="permission_granted">Notification access was granted. If bookmarks are still not
+        created, click item below to re-register. Click this item again to revoke
+        notification access</string>
+    <string name="reinit_service">Click to re-initialize the service in case you still cannot
+        create bookmarks.</string>
+    <string name="foreground_service">Foreground service</string>
+    <string name="foreground_service_disabled">StopIt\'s service is in the background. Click to show
+        a permanent notification while StopIt\'s background service is running. This increases the
+        stability of the application!</string>
+    <string name="foreground_service_enabled">StopIt\'s background service is shown by a
+        permanent notification. This increases the stability of the application. Click to deactivate
+        this notification.</string>
+    <string name="pause_play_min_delay">Minimum pause-play interval</string>
+    <string name="pause_play_min_delay_summary">Min. seconds between pressing pause and play.
+        Too small values may cause spurious detections. 0.3 s or more are recommended. Current value: %1$.3f s
+        </string>
+    <string name="pause_play_max_delay">Maximum pause-play interval</string>
+    <string name="pause_play_max_delay_summary">Max. seconds between pressing pause and play.
+        Current value: %1$.3f s</string>
+    <string name="pause_play_notification_lookback">Max. notification lookback time</string>
+    <string name="max_notification_lookback_millis_summary">Max. time interval to look for
+        past notifications caused by other apps. Increase if notifications accidentally cause audio
+        bookmarks.  Current value: %1$.3f s</string>
+
+
+    <!-- Bookmark Preferences -->
+    <string name="vibrate">Vibrate</string>
+    <string name="vibrate_duration">Vibration duration</string>
+    <string name="vibrate_summary">%1$.3f s</string>
+    <string name="play_sound">Play sound</string>
 </resources>

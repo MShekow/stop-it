@@ -1,0 +1,75 @@
+<PreferenceScreen xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto">
+
+    <PreferenceCategory app:title="@string/service_header">
+
+        <SwitchPreferenceCompat
+            app:key="@string/key_service_state"
+            app:summaryOff="@string/permission_required"
+            app:summaryOn="@string/permission_granted"
+            app:title="@string/permissions_title" />
+
+        <Preference
+            app:dependency="@string/key_service_state"
+            app:key="@string/key_reinit_service"
+            app:title="@string/reinit_service" />
+
+        <SwitchPreferenceCompat
+            app:defaultValue="@bool/foreground_service_default"
+            app:key="@string/key_enable_foreground"
+            app:summaryOff="@string/foreground_service_disabled"
+            app:summaryOn="@string/foreground_service_enabled"
+            app:title="@string/foreground_service" />
+
+        <SeekBarPreference
+            android:max="@integer/pause_play_min_delay_millis_max"
+            app:defaultValue="@integer/pause_play_min_delay_millis_default"
+            app:key="@string/key_pause_play_min_delay_millis"
+            app:min="@integer/pause_play_min_delay_millis_min"
+            app:summary="@string/pause_play_min_delay_summary"
+            app:title="@string/pause_play_min_delay"
+            app:updatesContinuously="true" />
+
+
+        <SeekBarPreference
+            android:max="@integer/pause_play_max_delay_millis_max"
+            app:defaultValue="@integer/pause_play_max_delay_millis_default"
+            app:key="@string/key_pause_play_max_delay_millis"
+            app:min="@integer/pause_play_max_delay_millis_min"
+            app:summary="@string/pause_play_max_delay_summary"
+            app:title="@string/pause_play_max_delay"
+            app:updatesContinuously="true" />
+
+        <SeekBarPreference
+            android:max="@integer/max_notification_lookback_millis_max"
+            app:defaultValue="@integer/max_notification_lookback_millis_default"
+            app:key="@string/key_pause_play_notification_lookback"
+            app:min="@integer/max_notification_lookback_millis_min"
+            app:summary="@string/max_notification_lookback_millis_summary"
+            app:title="@string/pause_play_notification_lookback"
+            app:updatesContinuously="true" />
+    </PreferenceCategory>
+
+    <PreferenceCategory app:title="@string/bookmark_header">
+
+        <SwitchPreferenceCompat
+            app:defaultValue="@bool/vibrate_default"
+            app:key="@string/key_vibrate"
+            app:title="@string/vibrate" />
+
+        <SeekBarPreference
+            android:max="@integer/vibrate_millis_max"
+            app:defaultValue="@integer/vibrate_millis_default"
+            app:key="@string/key_vibrate_duration"
+            app:min="@integer/vibrate_millis_min"
+            app:summary="@string/vibrate_summary"
+            app:title="@string/vibrate_duration"
+            app:updatesContinuously="true" />
+
+        <SwitchPreferenceCompat
+            app:defaultValue="@bool/play_sound_default"
+            app:key="@string/key_play_sound"
+            app:title="@string/play_sound" />
+    </PreferenceCategory>
+
+</PreferenceScreen>

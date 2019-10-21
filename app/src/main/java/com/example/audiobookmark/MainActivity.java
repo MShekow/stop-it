@@ -65,7 +65,7 @@ public class MainActivity extends AppCompatActivity {
         switch (item.getItemId()) {
             // action with ID action_refresh was selected
             case R.id.action_settings:
-                Toast.makeText(this, "Settings", Toast.LENGTH_SHORT).show();
+                startActivity(new Intent(this, SettingsActivity.class));
                 /*
                 Example how to give task to service:
                 Intent intent = new Intent(this, MediaCallbackService.class)

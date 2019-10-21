@@ -1,0 +1,23 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <bool name="foreground_service_default">true</bool>
+
+    <integer name="pause_play_min_delay_millis_min">200</integer>
+    <integer name="pause_play_min_delay_millis_max">5000</integer>
+    <integer name="pause_play_min_delay_millis_default">500</integer>
+
+    <integer name="pause_play_max_delay_millis_min">200</integer>
+    <integer name="pause_play_max_delay_millis_max">5000</integer>
+    <integer name="pause_play_max_delay_millis_default">500</integer>
+
+    <integer name="max_notification_lookback_millis_min">0</integer>
+    <integer name="max_notification_lookback_millis_max">5000</integer>
+    <integer name="max_notification_lookback_millis_default">2000</integer>
+
+    <bool name="vibrate_default">true</bool>
+    <integer name="vibrate_millis_min">100</integer>
+    <integer name="vibrate_millis_max">5000</integer>
+    <integer name="vibrate_millis_default">500</integer>
+
+    <bool name="play_sound_default">true</bool>
+</resources>
