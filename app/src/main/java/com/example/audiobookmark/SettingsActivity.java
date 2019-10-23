@@ -67,6 +67,8 @@ public class SettingsActivity extends AppCompatActivity {
         public void onCreatePreferences(Bundle savedInstanceState, String rootKey) {
             setPreferencesFromResource(R.xml.root_preferences, rootKey);
 
+            // Make sure that the summary texts of seekbars that show sections (and their
+            // fractions) are updated whenever the user moves the seekbar's slider
             for (int preference_key_resource_id : secondSeekbarIds.keySet()) {
                 SeekBarPreference pref = findPreference(getString(preference_key_resource_id));
                 int summary_text_resource_id = secondSeekbarIds.get(preference_key_resource_id);
@@ -79,6 +81,8 @@ public class SettingsActivity extends AppCompatActivity {
     @Override
     protected void onResumeFragments() {
         super.onResumeFragments();
+        // Update the summary of the second-showing seekbars, as the setOnPreferenceChangeListener()
+        // call above only does so on a value CHANGE
         for (int preference_key_resource_id : secondSeekbarIds.keySet()) {
             SeekBarPreference pref = settingsFragment.findPreference(getString(preference_key_resource_id));
             if (pref != null) {

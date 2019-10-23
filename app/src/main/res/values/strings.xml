@@ -11,14 +11,13 @@
     <string name="bookmark_header">Action on bookmark creation</string>
 
     <!-- Service preferences -->
-    <string name="permissions_title">Permission state</string>
+    <string name="permissions_title">Permissions</string>
     <string name="service_state">Service state</string>
     <string name="permission_required">Notification access not granted yet. Click to open the
         Android system settings where you need to grant notification access to
         "Audio Bookmark Service"</string>
-    <string name="permission_granted">Notification access was granted. If bookmarks are still not
-        created, click item below to re-register. Click this item again to revoke
-        notification access</string>
+    <string name="permission_granted">Notification access was granted. Click this item again to revoke
+        notification access (deselect "Audio Bookmark Service")</string>
     <string name="foreground_service">Foreground service</string>
     <string name="foreground_service_disabled">StopIt\'s service is in the background. Click to show
         a permanent notification while StopIt\'s background service is running. This increases the

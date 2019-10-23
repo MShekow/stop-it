@@ -57,6 +57,7 @@ public class MediaCallbackService extends Service implements SharedPreferences.O
     private int thresholdNotificationMs = 2000;
     private boolean useForeground = true;
     private boolean shouldPlaySound = true;
+    private int vibrationDurationMs = 500;
     private boolean shouldVibrate = true;
 
     private MediaSessionManager.OnActiveSessionsChangedListener sessionListener = new MediaSessionManager.OnActiveSessionsChangedListener() {
@@ -323,6 +324,8 @@ public class MediaCallbackService extends Service implements SharedPreferences.O
             thresholdNotificationMs = (Integer) value;
         } else if (key.equals(getString(R.string.key_vibrate))) {
             shouldVibrate = (Boolean) value;
+        } else if (key.equals(getString(R.string.key_vibrate_duration))) {
+            vibrationDurationMs = (Integer) value;
         } else if (key.equals(getString(R.string.key_play_sound))) {
             shouldPlaySound = (Boolean) value;
         } else if (key.equals(getString(R.string.key_enable_foreground))) {
@@ -482,7 +485,7 @@ public class MediaCallbackService extends Service implements SharedPreferences.O
     private void vibrate() {
         Vibrator vibrator = (Vibrator) getSystemService(Context.VIBRATOR_SERVICE);
         if (vibrator.hasVibrator()) {
-            vibrator.vibrate(500); // for 500 ms
+            vibrator.vibrate(vibrationDurationMs);
         }
     }
 

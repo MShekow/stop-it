@@ -38,9 +38,25 @@ public class StopitNotificationListenerService extends NotificationListenerServi
 
     @Override
     public void onNotificationPosted(StatusBarNotification sbn){
-        // TODO refactor to keep the timestamp simply by checking that the package name is DIFFERENT to our own one!
         lastNotificationTimestampsMs.put(sbn.getPackageName(), SystemClock.elapsedRealtime());
+        cleanOutdatedNotificationTimestamps();
         Log.d(TAG, "onNotificationPosted(): updated timestamp! " + sbn.getPackageName());
+    }
+
+    private static void cleanOutdatedNotificationTimestamps() {
+        // Makes sure that lastNotificationTimestampsMs doesn't grow indefinitely - keeping just
+        // the few latest notification timestamps from a few apps is enough!
+        while (lastNotificationTimestampsMs.size() > 5) {
+            long oldest = Long.MAX_VALUE;
+            String oldestKey = "";
+            for (Map.Entry<String, Long> entry : lastNotificationTimestampsMs.entrySet()) {
+                if (entry.getValue() < oldest) {
+                    oldest = entry.getValue();
+                    oldestKey = entry.getKey();
+                }
+            }
+            lastNotificationTimestampsMs.remove(oldestKey);
+        }
     }
 
     @Override
