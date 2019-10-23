@@ -19,8 +19,6 @@
     <string name="permission_granted">Notification access was granted. If bookmarks are still not
         created, click item below to re-register. Click this item again to revoke
         notification access</string>
-    <string name="reinit_service">Click to re-initialize the service in case you still cannot
-        create bookmarks.</string>
     <string name="foreground_service">Foreground service</string>
     <string name="foreground_service_disabled">StopIt\'s service is in the background. Click to show
         a permanent notification while StopIt\'s background service is running. This increases the

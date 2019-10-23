@@ -9,11 +9,6 @@
             app:summaryOn="@string/permission_granted"
             app:title="@string/permissions_title" />
 
-        <Preference
-            app:dependency="@string/key_service_state"
-            app:key="@string/key_reinit_service"
-            app:title="@string/reinit_service" />
-
         <SwitchPreferenceCompat
             app:defaultValue="@bool/foreground_service_default"
             app:key="@string/key_enable_foreground"
