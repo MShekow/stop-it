@@ -8,6 +8,7 @@ import android.app.Service;
 import android.content.ComponentName;
 import android.content.Context;
 import android.content.Intent;
+import android.content.SharedPreferences;
 import android.media.AudioManager;
 import android.media.MediaDescription;
 import android.media.MediaMetadata;
@@ -23,6 +24,7 @@ import android.util.Log;
 
 import androidx.annotation.Nullable;
 import androidx.core.app.NotificationCompat;
+import androidx.preference.PreferenceManager;
 
 import java.util.HashMap;
 import java.util.HashSet;
@@ -30,15 +32,12 @@ import java.util.List;
 import java.util.Map;
 import java.util.Set;
 
-public class MediaCallbackService extends Service {
+public class MediaCallbackService extends Service implements SharedPreferences.OnSharedPreferenceChangeListener {
     public static final String START_ACTION = "START_ACTION";
     public static final String PLAY_ACTION = "PLAY_ACTION";
     static final String TAG = "MediaCallbackService";
     private static final int ONGOING_NOTIFICATION_ID = 21434;
     public static final String CHANNEL_ID = "MediaCallbackServiceChannel";
-    private static final int THRESHOLD_MAX_MS = 2000;
-    private static final int THRESHOLD_MIN_MS = 500;
-    private static final int THRESHOLD_NOTIFICATION_MS = 2000;
 
     private Map<String, MediaController> controllers = new HashMap<>();
     private Map<String, MediaCB> callbacks = new HashMap<>();
@@ -49,6 +48,68 @@ public class MediaCallbackService extends Service {
     private BookmarkRepository repository = null;
     private SoundPool shortPlayer;
     private int beepSoundId = 0;
+    private boolean isNotificationActive = false;
+
+    // These values will be overwritten in onCreate() by the values from the SharedPreferences, and
+    // will be kept up to date by the SharedPreferences listener
+    private int thresholdMaxMs = 2000;
+    private int thresholdMinMs = 500;
+    private int thresholdNotificationMs = 2000;
+    private boolean useForeground = true;
+    private boolean shouldPlaySound = true;
+    private boolean shouldVibrate = true;
+
+    private MediaSessionManager.OnActiveSessionsChangedListener sessionListener = new MediaSessionManager.OnActiveSessionsChangedListener() {
+        @Override
+        public void onActiveSessionsChanged(@Nullable List<MediaController> controllers) {
+            if (controllers == null) {
+                return;
+            }
+
+            Log.d(TAG, "onActiveSessionsChanged():");
+            Set<String> newPackageNames = new HashSet<>();
+            for (MediaController c : controllers) {
+                Log.d(TAG, getPackageAndSessionName(c));
+                newPackageNames.add(getPackageAndSessionName(c));
+            }
+
+            // Unregister the ones we no longer need
+            if (controllers.isEmpty()) {
+                unregisterAllCallbacks();
+                // When the user removes Notification listener permissions, this is also what happens!
+                if (!StopitNotificationListenerService.isEnabled(getApplicationContext())) {
+                    initialized = false;
+                    createUpdateOrRemoveForegroundNotification();
+                    Log.d(TAG, "onActiveSessionsChanged(): lost initialization!");
+                }
+            } else {
+                // Note: we make a COPY of the keySet to avoid a ConcurrentModificationException
+                for (String packageAndSessionName : MediaCallbackService.this.controllers.keySet().toArray(new String[0])) {
+                    if (!newPackageNames.contains(packageAndSessionName)) {
+                        unregisterCallback(packageAndSessionName);
+                    }
+                }
+
+                // Register those we haven't registered yet
+                for (MediaController c : controllers) {
+                    if (!MediaCallbackService.this.controllers.containsKey(getPackageAndSessionName(c))) {
+                        registerCallback(c);
+                    }
+                }
+            }
+        }
+    };
+
+    @Override
+    public void onSharedPreferenceChanged(SharedPreferences sharedPreferences, String key) {
+        if (key.equals(getString(R.string.key_enable_foreground))) {
+            useForeground = sharedPreferences.getBoolean(key, false);
+            Log.d(TAG, "Foreground pref changed: " + useForeground);
+            createUpdateOrRemoveForegroundNotification();
+        } else {
+            updateValueFromPreference(key, sharedPreferences.getAll().get(key));
+        }
+    }
 
     private class MediaCB extends MediaController.Callback {
         private String packageAndSessionName;
@@ -60,7 +121,7 @@ public class MediaCallbackService extends Service {
             this.packageAndSessionName = packageAndSessionName;
         }
 
-        public void updateCachedMetadata(AudioMetadata metadata, String mediaId) {
+        void updateCachedMetadata(AudioMetadata metadata, String mediaId) {
             this.cachedMetadata = metadata;
             this.cachedMediaId = mediaId;
         }
@@ -127,8 +188,15 @@ public class MediaCallbackService extends Service {
 
         Log.d(TAG, "onStartCommand " + intent.getAction());
         if (intent.getAction().equals(MediaCallbackService.START_ACTION)) {
-            if (this.initialized) {
-                Log.d(TAG, "returning, already initialized!");
+            if (initialized) {
+                if (!StopitNotificationListenerService.isEnabled(getApplicationContext())) {
+                    initialized = false;
+                    createUpdateOrRemoveForegroundNotification();
+                    Log.d(TAG, "returning, lost initialization!");
+                } else {
+                    Log.d(TAG, "returning, already initialized!");
+                }
+
                 return START_STICKY;
             }
 
@@ -140,31 +208,21 @@ public class MediaCallbackService extends Service {
                 manager.createNotificationChannel(chan);
             }
 
-            Intent notificationIntent = new Intent(this, MainActivity.class);
-            PendingIntent pendingIntent =
-                    PendingIntent.getActivity(this, 0, notificationIntent, 0);
-
-            Notification notification =
-                    new NotificationCompat.Builder(this, CHANNEL_ID)
-                            .setContentTitle(getText(R.string.notification_title))
-                            .setContentText(getText(R.string.notification_message))
-                            .setSmallIcon(R.drawable.ic_settings_black_24dp)
-                            .setContentIntent(pendingIntent)
-                            .setTicker("Some ticker text")
-                            .setChannelId(CHANNEL_ID)
-                            .build();
-
-            startForeground(ONGOING_NOTIFICATION_ID, notification);
-
-            registerAllCallbacks();
-
-            this.initialized = true;
+            if (useForeground) {
+                createUpdateOrRemoveForegroundNotification();
+            }
+            setup();
         } else if (intent.getAction().equals(MediaCallbackService.PLAY_ACTION)) {
             // TODO build a whitelist of players where we know this works, and then also do the
             // seeking a bit later, as it won't have any effect if done immediately AND switching a
             // track
             // For instance, for Pocket Casts, searching by ID works fine
             // But for Cast Box, only playFromSearch() works
+
+            if (!initialized) {
+                Log.d(TAG, "Cannot execute PLAY action, not initialized!");
+                return START_STICKY;
+            }
 
             String packageName = intent.getStringExtra("package");
             for (String packageAndSessionName : controllers.keySet()) {
@@ -194,41 +252,13 @@ public class MediaCallbackService extends Service {
         repository = new BookmarkRepository(getApplicationContext());
         shortPlayer = new SoundPool.Builder().setMaxStreams(10).build();
         beepSoundId = shortPlayer.load(this, R.raw.beepogg, 1);
+        SharedPreferences sharedPrefs = PreferenceManager.getDefaultSharedPreferences(this);
+        sharedPrefs.registerOnSharedPreferenceChangeListener(this);
+        Map<String, ?> prefsMap = sharedPrefs.getAll();
+        for (Map.Entry<String, ?> entry : prefsMap.entrySet()) {
+            updateValueFromPreference(entry.getKey(), entry.getValue());
+        }
         sessionManager = (MediaSessionManager) this.getSystemService(Context.MEDIA_SESSION_SERVICE);
-        sessionManager.addOnActiveSessionsChangedListener(new MediaSessionManager.OnActiveSessionsChangedListener() {
-            @Override
-            public void onActiveSessionsChanged(@Nullable List<MediaController> controllers) {
-                if (controllers == null) {
-                    return;
-                }
-
-                Log.d(TAG, "onActiveSessionsChanged():");
-                Set<String> newPackageNames = new HashSet<>();
-                for (MediaController c : controllers) {
-                    Log.d(TAG, getPackageAndSessionName(c));
-                    newPackageNames.add(getPackageAndSessionName(c));
-                }
-
-                // Unregister the ones we no longer need
-                if (controllers.isEmpty()) {
-                    unregisterAllCallbacks();
-                } else {
-                    // Note: we make a COPY of the keySet to avoid a ConcurrentModificationException
-                    for (String packageAndSessionName : MediaCallbackService.this.controllers.keySet().toArray(new String[0])) {
-                        if (!newPackageNames.contains(packageAndSessionName)) {
-                            unregisterCallback(packageAndSessionName);
-                        }
-                    }
-                }
-
-                // Register those we haven't registered yet
-                for (MediaController c : controllers) {
-                    if (!MediaCallbackService.this.controllers.containsKey(getPackageAndSessionName(c))) {
-                        registerCallback(c);
-                    }
-                }
-            }
-        }, new ComponentName(getApplicationContext(), StopitNotificationListenerService.class));
     }
 
     @Override
@@ -236,6 +266,68 @@ public class MediaCallbackService extends Service {
         unregisterAllCallbacks();
         shortPlayer.release();
         super.onDestroy();
+    }
+
+    private void setup() {
+        if (StopitNotificationListenerService.isEnabled(getApplicationContext())) {
+            sessionManager.addOnActiveSessionsChangedListener(sessionListener,
+                    new ComponentName(getApplicationContext(), StopitNotificationListenerService.class));
+            registerAllCallbacks();
+            initialized = true;
+        }
+    }
+
+    private void createUpdateOrRemoveForegroundNotification() {
+        if (!useForeground) {
+            stopForeground(true);
+            return;
+        }
+
+        Intent notificationIntent = new Intent(this, MainActivity.class);
+        PendingIntent pendingIntent =
+                PendingIntent.getActivity(this, 0, notificationIntent, 0);
+
+        CharSequence content;
+        if (StopitNotificationListenerService.isEnabled(getApplicationContext())) {
+            content = getText(R.string.notification_message_ok);
+        } else {
+            content = getText(R.string.notification_message_perms_missing);
+        }
+
+        Notification notification =
+                new NotificationCompat.Builder(this, CHANNEL_ID)
+                        .setContentTitle(getText(R.string.notification_title))
+                        .setContentText(content)
+                        .setSmallIcon(R.drawable.ic_settings_black_24dp)
+                        .setContentIntent(pendingIntent)
+                        .setTicker("Some ticker text")
+                        .setChannelId(CHANNEL_ID)
+                        .build();
+
+        if (!isNotificationActive) {
+            startForeground(ONGOING_NOTIFICATION_ID, notification);
+            isNotificationActive = true;
+        } else {
+            // Update existing notification
+            NotificationManager notManager = (NotificationManager) getSystemService(Context.NOTIFICATION_SERVICE);
+            notManager.notify(ONGOING_NOTIFICATION_ID, notification);
+        }
+    }
+
+    private void updateValueFromPreference(String key, Object value) {
+        if (key.equals(getString(R.string.key_pause_play_min_delay_millis))) {
+            thresholdMinMs = (Integer) value;
+        } else if (key.equals(getString(R.string.key_pause_play_max_delay_millis))) {
+            thresholdMaxMs = (Integer) value;
+        } else if (key.equals(getString(R.string.key_pause_play_notification_lookback))) {
+            thresholdNotificationMs = (Integer) value;
+        } else if (key.equals(getString(R.string.key_vibrate))) {
+            shouldVibrate = (Boolean) value;
+        } else if (key.equals(getString(R.string.key_play_sound))) {
+            shouldPlaySound = (Boolean) value;
+        } else if (key.equals(getString(R.string.key_enable_foreground))) {
+            useForeground = (Boolean) value;
+        }
     }
 
     private void unregisterAllCallbacks() {
@@ -314,7 +406,7 @@ public class MediaCallbackService extends Service {
             Log.d(TAG, "Play = True. Last TS: " + lastPauseTimestampMs);
             long currentTimeMs = SystemClock.elapsedRealtime();
             long difference = currentTimeMs - lastPauseTimestampMs;
-            if (difference < THRESHOLD_MIN_MS) {
+            if (difference < thresholdMinMs) {
                 Log.d(TAG, "Discarding event " + metaData.track + " - difference is too small: " + difference);
                 return;
             }
@@ -325,7 +417,7 @@ public class MediaCallbackService extends Service {
                 return;
             }
 
-            if (difference < THRESHOLD_MAX_MS) {
+            if (difference < thresholdMaxMs) {
                 Log.d(TAG, "Triggered event: " + metaData.track);
                 Bookmark bookmark = new Bookmark();
                 bookmark.createdAt = System.currentTimeMillis();
@@ -336,7 +428,12 @@ public class MediaCallbackService extends Service {
                 bookmark.playerPackage = controller.getPackageName();
                 bookmark.metadata = mediaId;
                 repository.insert(bookmark);
-                playBeepSound();
+                if (shouldPlaySound) {
+                    playBeepSound();
+                }
+                if (shouldVibrate) {
+                    vibrate();
+                }
             } else {
                 Log.d(TAG, "Difference too large: " + difference);
             }
@@ -348,7 +445,7 @@ public class MediaCallbackService extends Service {
             if (packageName.equals(ignoredPackageName)) continue;
 
             long notificationTimeDiff = currentTimeMs - StopitNotificationListenerService.lastNotificationTimestampsMs.get(packageName);
-            if (notificationTimeDiff < THRESHOLD_NOTIFICATION_MS) {
+            if (notificationTimeDiff < thresholdNotificationMs) {
                 return true;
             } else {
                 Log.d(TAG, "hasRecentNotificationHappened(" + packageName + "): ignored, diff was " + notificationTimeDiff);
@@ -380,7 +477,9 @@ public class MediaCallbackService extends Service {
                 .getStreamMaxVolume(AudioManager.STREAM_MUSIC);
         float volume = actualVolume / maxVolume;
         shortPlayer.play(beepSoundId, volume, volume, 1, 0, 1f);
+    }
 
+    private void vibrate() {
         Vibrator vibrator = (Vibrator) getSystemService(Context.VIBRATOR_SERVICE);
         if (vibrator.hasVibrator()) {
             vibrator.vibrate(500); // for 500 ms

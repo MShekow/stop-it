@@ -2,7 +2,8 @@
     <string name="app_name">Stop It!</string>
     <string name="action_settings">Settings</string>
     <string name="notification_title">StopIt!</string>
-    <string name="notification_message">Ready to create audio bookmarks</string>
+    <string name="notification_message_ok">Ready to create audio bookmarks</string>
+    <string name="notification_message_perms_missing">Service not ready yet, missing permissions, see settings dialog!</string>
     <string name="title_activity_settings">Settings</string>
 
     <!-- Preference categories -->

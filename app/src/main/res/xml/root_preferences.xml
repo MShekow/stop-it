@@ -60,6 +60,7 @@
         <SeekBarPreference
             android:max="@integer/vibrate_millis_max"
             app:defaultValue="@integer/vibrate_millis_default"
+            app:dependency="@string/key_vibrate"
             app:key="@string/key_vibrate_duration"
             app:min="@integer/vibrate_millis_min"
             app:summary="@string/vibrate_summary"

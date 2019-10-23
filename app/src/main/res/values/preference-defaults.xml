@@ -16,7 +16,7 @@
 
     <bool name="vibrate_default">true</bool>
     <integer name="vibrate_millis_min">100</integer>
-    <integer name="vibrate_millis_max">5000</integer>
+    <integer name="vibrate_millis_max">2000</integer>
     <integer name="vibrate_millis_default">500</integer>
 
     <bool name="play_sound_default">true</bool>

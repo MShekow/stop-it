@@ -38,6 +38,7 @@ public class StopitNotificationListenerService extends NotificationListenerServi
 
     @Override
     public void onNotificationPosted(StatusBarNotification sbn){
+        // TODO refactor to keep the timestamp simply by checking that the package name is DIFFERENT to our own one!
         lastNotificationTimestampsMs.put(sbn.getPackageName(), SystemClock.elapsedRealtime());
         Log.d(TAG, "onNotificationPosted(): updated timestamp! " + sbn.getPackageName());
     }
@@ -49,5 +50,8 @@ public class StopitNotificationListenerService extends NotificationListenerServi
         // But it is also called in other occasions, and also if it was already enabled
         // Thus we have to consider it with care!
         Log.d(TAG, "onListenerConnected()");
+        Intent intent = new Intent(this, MediaCallbackService.class)
+                .setAction(MediaCallbackService.START_ACTION);
+        startService(intent);
     }
 }
