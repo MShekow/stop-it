@@ -64,7 +64,14 @@ public class BookmarkListAdapter extends RecyclerView.Adapter<BookmarkListAdapte
             if (disablePlayButton) {
                 Drawable disabledArrow = context.getResources().getDrawable(R.drawable.ic_play_arrow_gray_24dp, null);
                 holder.playButtonView.setImageDrawable(disabledArrow);
+                holder.playButtonView.setOnClickListener(new View.OnClickListener() {
+                    @Override
+                    public void onClick(View v) {}
+                });
             } else {
+                Drawable enableArrow = context.getResources().getDrawable(R.drawable.ic_play_arrow_black_24dp, null);
+                holder.playButtonView.setImageDrawable(enableArrow);
+
                 holder.playButtonView.setOnClickListener(new View.OnClickListener() {
                     @Override
                     public void onClick(View v) {
