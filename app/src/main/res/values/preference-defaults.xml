@@ -8,7 +8,7 @@
 
     <integer name="pause_play_max_delay_millis_min">200</integer>
     <integer name="pause_play_max_delay_millis_max">5000</integer>
-    <integer name="pause_play_max_delay_millis_default">500</integer>
+    <integer name="pause_play_max_delay_millis_default">2000</integer>
 
     <integer name="max_notification_lookback_millis_min">0</integer>
     <integer name="max_notification_lookback_millis_max">5000</integer>

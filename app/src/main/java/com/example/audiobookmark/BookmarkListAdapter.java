@@ -2,13 +2,12 @@ package com.example.audiobookmark;
 
 import android.content.Context;
 import android.content.Intent;
-import android.net.Uri;
+import android.graphics.drawable.Drawable;
 import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
 import android.widget.ImageView;
 import android.widget.TextView;
-import android.widget.Toast;
 
 import androidx.annotation.NonNull;
 import androidx.recyclerview.widget.RecyclerView;
@@ -60,26 +59,22 @@ public class BookmarkListAdapter extends RecyclerView.Adapter<BookmarkListAdapte
             holder.positionTextView.setText(convertTimestamp(currentBookmark.timestampSeconds));
             holder.artistTextView.setText(currentBookmark.artist);
 
-            holder.playButtonView.setOnClickListener(new View.OnClickListener() {
-                @Override
-                public void onClick(View v) {
-                    if (currentBookmark.playerPackage.contains("spotify")) {
-                        Intent intent = new Intent(Intent.ACTION_VIEW);
-                        intent.setData(Uri.parse(currentBookmark.metadata));
-                        intent.putExtra(Intent.EXTRA_REFERRER,
-                                Uri.parse("android-app://" + context.getPackageName()));
-                        context.startActivity(intent);
-                    } else {
+            PlaybackSupportState supportState = PlaybackBookmarkSupport.isPlaybackSupportedForPackage(currentBookmark.playerPackage);
+            boolean disablePlayButton = supportState == PlaybackSupportState.UNKNOWN || supportState == PlaybackSupportState.UNSUPPORTED;
+            if (disablePlayButton) {
+                Drawable disabledArrow = context.getResources().getDrawable(R.drawable.ic_play_arrow_gray_24dp, null);
+                holder.playButtonView.setImageDrawable(disabledArrow);
+            } else {
+                holder.playButtonView.setOnClickListener(new View.OnClickListener() {
+                    @Override
+                    public void onClick(View v) {
                         Intent intent = new Intent(context, MediaCallbackService.class)
                                 .setAction(MediaCallbackService.PLAY_ACTION)
-                                .putExtra("package", currentBookmark.playerPackage)
-                                .putExtra("mediaid", currentBookmark.metadata)
-                                .putExtra("timestamp", currentBookmark.timestampSeconds);
+                                .putExtra("bookmark", currentBookmark);
                         context.startService(intent);
                     }
-                    Toast.makeText(BookmarkListAdapter.this.context, currentBookmark.track, Toast.LENGTH_SHORT).show();
-                }
-            });
+                });
+            }
 
             holder.deleteImageView.setOnClickListener(new View.OnClickListener() {
                 @Override

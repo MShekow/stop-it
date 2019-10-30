@@ -21,6 +21,7 @@ import android.os.IBinder;
 import android.os.SystemClock;
 import android.os.Vibrator;
 import android.util.Log;
+import android.widget.Toast;
 
 import androidx.annotation.Nullable;
 import androidx.core.app.NotificationCompat;
@@ -49,6 +50,8 @@ public class MediaCallbackService extends Service implements SharedPreferences.O
     private SoundPool shortPlayer;
     private int beepSoundId = 0;
     private boolean isNotificationActive = false;
+    private boolean seekModeActive = false;
+    private long seekModeStartTimestampMs = 0;
 
     // These values will be overwritten in onCreate() by the values from the SharedPreferences, and
     // will be kept up to date by the SharedPreferences listener
@@ -59,6 +62,7 @@ public class MediaCallbackService extends Service implements SharedPreferences.O
     private boolean shouldPlaySound = true;
     private int vibrationDurationMs = 500;
     private boolean shouldVibrate = true;
+    private Bookmark seekedBookmark = null;
 
     private MediaSessionManager.OnActiveSessionsChangedListener sessionListener = new MediaSessionManager.OnActiveSessionsChangedListener() {
         @Override
@@ -225,24 +229,41 @@ public class MediaCallbackService extends Service implements SharedPreferences.O
                 return START_STICKY;
             }
 
-            String packageName = intent.getStringExtra("package");
-            for (String packageAndSessionName : controllers.keySet()) {
-                if (packageAndSessionName.startsWith(packageName)) {
-                    // Simply try the first matching controller
-                    String mediaId = intent.getStringExtra("mediaid");
-                    if (mediaId != null) {
+            Bookmark bookmark = intent.getParcelableExtra("bookmark");
+            PlaybackSupportState supportState = PlaybackBookmarkSupport.isPlaybackSupportedForPackage(bookmark.playerPackage);
+            if (supportState == PlaybackSupportState.SUPPORTED_BY_MEDIA_ID || supportState == PlaybackSupportState.SUPPORTED_BY_QUERY) {
+                boolean foundController = false;
+                for (String packageAndSessionName : controllers.keySet()) {
+                    if (packageAndSessionName.startsWith(bookmark.playerPackage)) {
+                        // Simply try the first matching controller
                         MediaController controller = controllers.get(packageAndSessionName);
                         MediaController.TransportControls controls = controller.getTransportControls();
-                        controls.playFromMediaId(mediaId, null);
-                        int timestampSeconds = intent.getIntExtra("timestamp", 0);
-                        controls.seekTo(1000 * timestampSeconds);
-                        Log.d(TAG, "Play action executed!" + mediaId);
+
+                        if (supportState == PlaybackSupportState.SUPPORTED_BY_MEDIA_ID) {
+                            String mediaId = bookmark.metadata;
+                            if (mediaId != null) {
+                                controls.playFromMediaId(mediaId, null);
+                                enableSeekMode(bookmark);
+                                Log.d(TAG, "Play action executed!" + mediaId);
+                            }
+                        } else {
+                            // PlaybackSupportState.SUPPORTED_BY_QUERY
+                            controls.playFromSearch(bookmark.track, null);
+                            enableSeekMode(bookmark);
+                            Log.d(TAG, "Play action executed!" + bookmark.track);
+                        }
+                        foundController = true;
+                        break;
                     }
-                    break;
+                }
+
+                if (!foundController) {
+                    Toast.makeText(getApplicationContext(),
+                            String.format("App %s is not started, please start it " +
+                                    "first", bookmark.playerPackage), Toast.LENGTH_SHORT).show();
                 }
             }
         }
-
 
         // If we get killed, after returning from here, restart
         return START_STICKY;
@@ -269,6 +290,28 @@ public class MediaCallbackService extends Service implements SharedPreferences.O
         super.onDestroy();
     }
 
+    private void enableSeekMode(Bookmark bookmark) {
+        seekModeStartTimestampMs = SystemClock.elapsedRealtime();
+        seekedBookmark = bookmark;
+        seekModeActive = true;
+    }
+
+    private boolean isSeekModeActive() {
+        if (seekModeActive) {
+            long now = SystemClock.elapsedRealtime();
+            if ((now - seekModeStartTimestampMs) > 30 * 1000) {
+                Log.d(TAG, "Seek-mode auto-disabled due to old timestamp: " + now + " " + seekModeStartTimestampMs);
+                disableSeekMode();
+            }
+        }
+        return seekModeActive;
+    }
+
+    private void disableSeekMode() {
+        seekModeActive = false;
+        seekedBookmark = null;
+    }
+
     private void setup() {
         if (StopitNotificationListenerService.isEnabled(getApplicationContext())) {
             sessionManager.addOnActiveSessionsChangedListener(sessionListener,
@@ -281,6 +324,7 @@ public class MediaCallbackService extends Service implements SharedPreferences.O
     private void createUpdateOrRemoveForegroundNotification() {
         if (!useForeground) {
             stopForeground(true);
+            isNotificationActive = false;
             return;
         }
 
@@ -373,7 +417,8 @@ public class MediaCallbackService extends Service implements SharedPreferences.O
         }
     }
 
-    private void processStateChange(int newState, int timestampSeconds, MediaController controller, MediaCB callback) {
+    private void processStateChange(int newState, int timestampSeconds, MediaController controller,
+                                    MediaCB callback) {
         AudioMetadata metaData;
         String mediaId = null;
         MediaMetadata mediaMetadata = controller.getMetadata();
@@ -387,60 +432,76 @@ public class MediaCallbackService extends Service implements SharedPreferences.O
             mediaId = mediaMetadata.getString(MediaMetadata.METADATA_KEY_MEDIA_ID);
         }
 
-        if (newState == PlaybackState.STATE_PAUSED) {
-            lastPauseTimestampMs = SystemClock.elapsedRealtime();
-            lastMetaData = metaData;
-        } else {
-            if (lastMetaData == null) {
-                Log.d(TAG, "Warning: lastMetaData is null!");
-                return;
-            }
-
-            if (!metaData.equals(lastMetaData)) {
-                Log.d(TAG, "Current: " + metaData.toString());
-                if (lastMetaData == null) {
-                    Log.d(TAG, "Old: null");
-                } else {
-                    Log.d(TAG, "Old: " + lastMetaData.toString());
-                }
-                return;
-            }
-
-            Log.d(TAG, "Play = True. Last TS: " + lastPauseTimestampMs);
-            long currentTimeMs = SystemClock.elapsedRealtime();
-            long difference = currentTimeMs - lastPauseTimestampMs;
-            if (difference < thresholdMinMs) {
-                Log.d(TAG, "Discarding event " + metaData.track + " - difference is too small: " + difference);
-                return;
-            }
-
-            if (hasRecentNotificationHappened(currentTimeMs, controller.getPackageName())) {
-                Log.d(TAG, "Discarding event " + metaData.track + " - there recently " +
-                        "was a notification!");
-                return;
-            }
-
-            if (difference < thresholdMaxMs) {
-                Log.d(TAG, "Triggered event: " + metaData.track);
-                Bookmark bookmark = new Bookmark();
-                bookmark.createdAt = System.currentTimeMillis();
-                bookmark.artist = metaData.artist;
-                bookmark.album = metaData.album;
-                bookmark.track = metaData.track;
-                bookmark.timestampSeconds = timestampSeconds;
-                bookmark.playerPackage = controller.getPackageName();
-                bookmark.metadata = mediaId;
-                repository.insert(bookmark);
-                if (shouldPlaySound) {
-                    playBeepSound();
-                }
-                if (shouldVibrate) {
-                    vibrate();
-                }
+        if (isSeekModeActive()) {
+            if (newState == PlaybackState.STATE_PLAYING
+                    && controller.getPackageName().equals(seekedBookmark.playerPackage)
+                    && metaData.track.equals(seekedBookmark.track)) {
+                controller.getTransportControls().seekTo(1000 * seekedBookmark.timestampSeconds);
+                Log.d(TAG, "Seek to " + seekedBookmark.timestampSeconds + " completed for "
+                        + seekedBookmark.track);
+                disableSeekMode();
             } else {
-                Log.d(TAG, "Difference too large: " + difference);
+                Log.d(TAG, "In seek mode, but something was not right");
+            }
+        } else {
+            // Normal mode, check whether we should create a new bookmark
+            if (newState == PlaybackState.STATE_PAUSED) {
+                lastPauseTimestampMs = SystemClock.elapsedRealtime();
+                lastMetaData = metaData;
+            } else {
+                if (lastMetaData == null) {
+                    Log.d(TAG, "Warning: lastMetaData is null!");
+                    return;
+                }
+
+                if (!metaData.equals(lastMetaData)) {
+                    Log.d(TAG, "Current: " + metaData.toString());
+                    if (lastMetaData == null) {
+                        Log.d(TAG, "Old: null");
+                    } else {
+                        Log.d(TAG, "Old: " + lastMetaData.toString());
+                    }
+                    return;
+                }
+
+                Log.d(TAG, "Play = True. Last TS: " + lastPauseTimestampMs);
+                long currentTimeMs = SystemClock.elapsedRealtime();
+                long difference = currentTimeMs - lastPauseTimestampMs;
+                if (difference < thresholdMinMs) {
+                    Log.d(TAG, "Discarding event " + metaData.track + " - difference is too small: " + difference);
+                    return;
+                }
+
+                if (hasRecentNotificationHappened(currentTimeMs, controller.getPackageName())) {
+                    Log.d(TAG, "Discarding event " + metaData.track + " - there recently " +
+                            "was a notification!");
+                    return;
+                }
+
+                if (difference < thresholdMaxMs) {
+                    Log.d(TAG, "Triggered event: " + metaData.track + " ID: " + mediaId);
+                    Bookmark bookmark = new Bookmark();
+                    bookmark.createdAt = System.currentTimeMillis();
+                    bookmark.artist = metaData.artist;
+                    bookmark.album = metaData.album;
+                    bookmark.track = metaData.track;
+                    bookmark.timestampSeconds = timestampSeconds;
+                    bookmark.playerPackage = controller.getPackageName();
+                    bookmark.metadata = mediaId;
+                    repository.insert(bookmark);
+                    if (shouldPlaySound) {
+                        playBeepSound();
+                    }
+                    if (shouldVibrate) {
+                        vibrate();
+                    }
+                } else {
+                    Log.d(TAG, "Difference too large: " + difference);
+                }
             }
         }
+
+
     }
 
     private boolean hasRecentNotificationHappened(long currentTimeMs, String ignoredPackageName) {
