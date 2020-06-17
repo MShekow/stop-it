@@ -218,12 +218,6 @@ public class MediaCallbackService extends Service implements SharedPreferences.O
             }
             setup();
         } else if (intent.getAction().equals(MediaCallbackService.PLAY_ACTION)) {
-            // TODO build a whitelist of players where we know this works, and then also do the
-            // seeking a bit later, as it won't have any effect if done immediately AND switching a
-            // track
-            // For instance, for Pocket Casts, searching by ID works fine
-            // But for Cast Box, only playFromSearch() works
-
             if (!initialized) {
                 Log.d(TAG, "Cannot execute PLAY action, not initialized!");
                 return START_STICKY;

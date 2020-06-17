@@ -27,8 +27,6 @@ public class PlaybackBookmarkSupport {
         // For the time being, as the YouTube app does not seem to provide either a media ID
         // nor a URI, I contacted support, let's see what happens (probably nothing)
         supportedPackages.put("com.google.android.youtube", PlaybackSupportState.UNSUPPORTED);
-
-        // TODO add other players
     }
 
     public static PlaybackSupportState isPlaybackSupportedForPackage(String packageName) {
