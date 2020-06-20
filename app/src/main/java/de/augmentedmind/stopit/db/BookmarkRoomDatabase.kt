@@ -1,4 +1,4 @@
-package de.augmentedmind.stopit
+package de.augmentedmind.stopit.db
 
 import android.content.Context
 import androidx.room.Database

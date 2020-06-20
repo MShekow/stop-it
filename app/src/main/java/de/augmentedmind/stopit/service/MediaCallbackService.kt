@@ -1,4 +1,4 @@
-package de.augmentedmind.stopit
+package de.augmentedmind.stopit.service
 
 import android.app.NotificationChannel
 import android.app.NotificationManager
@@ -24,7 +24,14 @@ import android.util.Log
 import android.widget.Toast
 import androidx.core.app.NotificationCompat
 import androidx.preference.PreferenceManager
-import de.augmentedmind.stopit.StopitNotificationListenerService.Companion.isEnabled
+import de.augmentedmind.stopit.*
+import de.augmentedmind.stopit.db.Bookmark
+import de.augmentedmind.stopit.db.BookmarkRepository
+import de.augmentedmind.stopit.db.BookmarkRoomDatabase
+import de.augmentedmind.stopit.service.StopitNotificationListenerService.Companion.isEnabled
+import de.augmentedmind.stopit.ui.MainActivity
+import de.augmentedmind.stopit.utils.BookmarkPlaybackSupport
+import de.augmentedmind.stopit.utils.PlaybackSupportState
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
@@ -188,7 +195,7 @@ class MediaCallbackService : Service(), OnSharedPreferenceChangeListener {
                 return START_STICKY
             }
             val bookmark: Bookmark = intent.getParcelableExtra("bookmark")
-            val supportState = PlaybackBookmarkSupport.isPlaybackSupportedForPackage(bookmark.playerPackage)
+            val supportState = BookmarkPlaybackSupport.isPlaybackSupportedForPackage(bookmark.playerPackage)
             if (supportState == PlaybackSupportState.SUPPORTED_BY_MEDIA_ID || supportState == PlaybackSupportState.SUPPORTED_BY_QUERY) {
                 var foundController = false
                 for (packageAndSessionName in controllers.keys) {

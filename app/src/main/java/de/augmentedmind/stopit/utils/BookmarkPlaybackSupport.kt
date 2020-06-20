@@ -1,15 +1,20 @@
-package de.augmentedmind.stopit
+package de.augmentedmind.stopit.utils
 
 import java.util.*
 
-object PlaybackBookmarkSupport {
+object BookmarkPlaybackSupport {
+    /**
+     * Helper class that indicates for which players our app can actually start playing back a
+     * previously saved bookmark (and seek to the captured position).
+     */
+
     /**
      * Maps from app package name to true (search by media ID) or false (search by query)
      */
-    private val supportedPackages: MutableMap<String?, PlaybackSupportState> = HashMap()
-    fun isPlaybackSupportedForPackage(packageName: String?): PlaybackSupportState? {
+    private val supportedPackages: MutableMap<String, PlaybackSupportState> = HashMap()
+    fun isPlaybackSupportedForPackage(packageName: String): PlaybackSupportState {
         return if (supportedPackages.containsKey(packageName)) {
-            supportedPackages[packageName]
+            supportedPackages[packageName]!!
         } else PlaybackSupportState.UNKNOWN
     }
 

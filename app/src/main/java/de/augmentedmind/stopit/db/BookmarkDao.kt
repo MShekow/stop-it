@@ -1,4 +1,4 @@
-package de.augmentedmind.stopit
+package de.augmentedmind.stopit.db
 
 import androidx.lifecycle.LiveData
 import androidx.room.Dao

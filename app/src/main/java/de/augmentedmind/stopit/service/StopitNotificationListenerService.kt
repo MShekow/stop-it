@@ -1,4 +1,4 @@
-package de.augmentedmind.stopit
+package de.augmentedmind.stopit.service
 
 import android.content.Context
 import android.content.Intent

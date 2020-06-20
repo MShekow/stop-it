@@ -1,4 +1,4 @@
-package de.augmentedmind.stopit
+package de.augmentedmind.stopit.db
 
 import android.os.Parcelable
 import androidx.room.Entity

@@ -1,4 +1,4 @@
-package de.augmentedmind.stopit
+package de.augmentedmind.stopit.ui
 
 import android.content.Intent
 import android.os.Bundle
@@ -12,6 +12,8 @@ import androidx.lifecycle.ViewModelProvider
 import androidx.recyclerview.widget.DividerItemDecoration
 import androidx.recyclerview.widget.LinearLayoutManager
 import androidx.recyclerview.widget.RecyclerView
+import de.augmentedmind.stopit.*
+import de.augmentedmind.stopit.service.MediaCallbackService
 
 class MainActivity : AppCompatActivity() {
     private lateinit var viewModel: BookmarkViewModel
@@ -32,7 +34,7 @@ class MainActivity : AppCompatActivity() {
             bookmarks?.let { adapter.setBookmarks(bookmarks) }
         })
         val intent = Intent(this, MediaCallbackService::class.java)
-                .setAction(MediaCallbackService.Companion.START_ACTION)
+                .setAction(MediaCallbackService.START_ACTION)
         startService(intent)
     }
 

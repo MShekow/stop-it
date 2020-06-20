@@ -1,4 +1,4 @@
-package de.augmentedmind.stopit
+package de.augmentedmind.stopit.ui
 
 import android.content.Context
 import android.content.Intent
@@ -8,7 +8,14 @@ import android.view.ViewGroup
 import android.widget.ImageView
 import android.widget.TextView
 import androidx.recyclerview.widget.RecyclerView
-import de.augmentedmind.stopit.BookmarkListAdapter.BookmarkViewHolder
+import de.augmentedmind.stopit.db.BookmarkRepository
+import de.augmentedmind.stopit.R
+import de.augmentedmind.stopit.ui.BookmarkListAdapter.BookmarkViewHolder
+import de.augmentedmind.stopit.db.Bookmark
+import de.augmentedmind.stopit.db.BookmarkRoomDatabase
+import de.augmentedmind.stopit.service.MediaCallbackService
+import de.augmentedmind.stopit.utils.BookmarkPlaybackSupport
+import de.augmentedmind.stopit.utils.PlaybackSupportState
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
@@ -38,7 +45,7 @@ class BookmarkListAdapter internal constructor(context: Context) : RecyclerView.
             holder.trackTextView.text = currentBookmark.track
             holder.positionTextView.text = convertTimestamp(currentBookmark.timestampSeconds)
             holder.artistTextView.text = currentBookmark.artist
-            val supportState = PlaybackBookmarkSupport.isPlaybackSupportedForPackage(currentBookmark.playerPackage)
+            val supportState = BookmarkPlaybackSupport.isPlaybackSupportedForPackage(currentBookmark.playerPackage)
             val disablePlayButton = supportState == PlaybackSupportState.UNKNOWN || supportState == PlaybackSupportState.UNSUPPORTED
             if (disablePlayButton) {
                 val disabledArrow = context.resources.getDrawable(R.drawable.ic_play_arrow_gray_24dp, null)
