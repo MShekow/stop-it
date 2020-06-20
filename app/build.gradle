@@ -6,7 +6,7 @@ apply plugin: 'kotlin-kapt'
 android {
     compileSdkVersion 29
     defaultConfig {
-        applicationId "com.example.audiobookmark"
+        applicationId "de.augmentedmind.stopit"
         minSdkVersion 22
         targetSdkVersion 29
         versionCode 1
@@ -19,7 +19,6 @@ android {
             proguardFiles getDefaultProguardFile('proguard-android-optimize.txt'), 'proguard-rules.pro'
         }
     }
-
     packagingOptions {
         exclude 'META-INF/atomicfu.kotlin_module'
     }

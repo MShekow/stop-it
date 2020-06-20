@@ -1,4 +1,4 @@
-package com.example.audiobookmark
+package de.augmentedmind.stopit
 
 import android.os.Parcelable
 import androidx.room.Entity

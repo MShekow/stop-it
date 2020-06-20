@@ -1,4 +1,4 @@
-package com.example.audiobookmark
+package de.augmentedmind.stopit
 
 import android.content.Intent
 import android.os.Bundle
@@ -8,7 +8,7 @@ import androidx.preference.Preference
 import androidx.preference.PreferenceFragmentCompat
 import androidx.preference.SeekBarPreference
 import androidx.preference.SwitchPreferenceCompat
-import com.example.audiobookmark.StopitNotificationListenerService.Companion.isEnabled
+import de.augmentedmind.stopit.StopitNotificationListenerService.Companion.isEnabled
 import java.util.*
 
 class SettingsActivity : AppCompatActivity() {

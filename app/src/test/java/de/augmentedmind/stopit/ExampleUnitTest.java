@@ -1,4 +1,4 @@
-package com.example.audiobookmark;
+package de.augmentedmind.stopit;
 
 import org.junit.Test;
 

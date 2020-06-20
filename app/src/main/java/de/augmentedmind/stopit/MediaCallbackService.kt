@@ -1,4 +1,4 @@
-package com.example.audiobookmark
+package de.augmentedmind.stopit
 
 import android.app.NotificationChannel
 import android.app.NotificationManager
@@ -24,7 +24,7 @@ import android.util.Log
 import android.widget.Toast
 import androidx.core.app.NotificationCompat
 import androidx.preference.PreferenceManager
-import com.example.audiobookmark.StopitNotificationListenerService.Companion.isEnabled
+import de.augmentedmind.stopit.StopitNotificationListenerService.Companion.isEnabled
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
