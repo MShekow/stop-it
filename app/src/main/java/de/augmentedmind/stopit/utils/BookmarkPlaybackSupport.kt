@@ -9,7 +9,7 @@ object BookmarkPlaybackSupport {
      */
 
     /**
-     * Maps from app package name to true (search by media ID) or false (search by query)
+     * Maps from app package name to the supported PlaybackSupportState.
      */
     private val supportedPackages: MutableMap<String, PlaybackSupportState> = HashMap()
     fun isPlaybackSupportedForPackage(packageName: String): PlaybackSupportState {
