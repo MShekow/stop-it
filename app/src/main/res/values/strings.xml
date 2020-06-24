@@ -1,7 +1,7 @@
 <resources>
     <string name="app_name">Stop It!</string>
     <string name="action_settings">Settings</string>
-    <string name="notification_title">StopIt!</string>
+    <string name="notification_title">Stop It!</string>
     <string name="notification_message_ok">Ready to create audio bookmarks</string>
     <string name="notification_message_perms_missing">Service not ready yet, missing permissions, see settings dialog!</string>
     <string name="title_activity_settings">Settings</string>
@@ -15,14 +15,14 @@
     <string name="service_state">Service state</string>
     <string name="permission_required">Notification access not granted yet. Click to open the
         Android system settings where you need to grant notification access to
-        "Audio Bookmark Service"</string>
+        "Stop It!"</string>
     <string name="permission_granted">Notification access was granted. Click this item again to revoke
-        notification access (deselect "Audio Bookmark Service")</string>
+        notification access (deselect "Stop It!")</string>
     <string name="foreground_service">Foreground service</string>
-    <string name="foreground_service_disabled">StopIt\'s service is in the background. Click to show
-        a permanent notification while StopIt\'s background service is running. This increases the
+    <string name="foreground_service_disabled">Stop It\'s service is in the background. Click to show
+        a permanent notification while Stop It\'s background service is running. This increases the
         stability of the application!</string>
-    <string name="foreground_service_enabled">StopIt\'s background service is shown by a
+    <string name="foreground_service_enabled">Stop It\'s background service is shown by a
         permanent notification. This increases the stability of the application. Click to deactivate
         this notification.</string>
     <string name="pause_play_min_delay">Minimum pause-play interval</string>
