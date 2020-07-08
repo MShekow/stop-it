@@ -7,15 +7,12 @@ import android.service.notification.NotificationListenerService
 import android.service.notification.StatusBarNotification
 import android.util.Log
 import androidx.core.app.NotificationManagerCompat
-import java.util.*
 
 class StopitNotificationListenerService : NotificationListenerService() {
 
     companion object {
-        @JvmField
-        var lastNotificationTimestampsMs: MutableMap<String, Long> = HashMap()
+        var lastNotificationTimestampsMs = mutableMapOf<String, Long>()
         const val TAG = "StopitNotifListenerServ"
-        @JvmStatic
         fun isEnabled(context: Context): Boolean {
             return NotificationManagerCompat
                     .getEnabledListenerPackages(context)
@@ -26,15 +23,7 @@ class StopitNotificationListenerService : NotificationListenerService() {
             // Makes sure that lastNotificationTimestampsMs doesn't grow indefinitely - keeping just
             // the few latest notification timestamps from a few apps is enough!
             while (lastNotificationTimestampsMs.size > 5) {
-                var oldest = Long.MAX_VALUE
-                var oldestKey = ""
-                for ((key, value) in lastNotificationTimestampsMs) {
-                    if (value < oldest) {
-                        oldest = value
-                        oldestKey = key
-                    }
-                }
-                lastNotificationTimestampsMs.remove(oldestKey)
+                lastNotificationTimestampsMs.remove(lastNotificationTimestampsMs.minBy { it.value }!!.key)
             }
         }
     }

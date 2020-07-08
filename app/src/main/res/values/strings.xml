@@ -5,6 +5,7 @@
     <string name="notification_message_ok">Ready to create audio bookmarks</string>
     <string name="notification_message_perms_missing">Service not ready yet, missing permissions, see settings dialog!</string>
     <string name="title_activity_settings">Settings</string>
+    <string name="no_bookmarks_yet">No bookmarks stored yet!</string>
 
     <!-- Preference categories -->
     <string name="service_header">Background service</string>

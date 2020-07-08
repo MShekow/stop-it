@@ -20,7 +20,7 @@ import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 
-class BookmarkListAdapter internal constructor(context: Context) : RecyclerView.Adapter<BookmarkViewHolder>() {
+class BookmarkListAdapter internal constructor(private val context: Context) : RecyclerView.Adapter<BookmarkViewHolder>() {
     inner class BookmarkViewHolder(itemView: View) : RecyclerView.ViewHolder(itemView) {
         val trackTextView: TextView = itemView.findViewById(R.id.trackTextView)
         val playButtonView: ImageView = itemView.findViewById(R.id.playButtonView)
@@ -30,8 +30,7 @@ class BookmarkListAdapter internal constructor(context: Context) : RecyclerView.
     }
 
     private val layoutInflater = LayoutInflater.from(context)
-    private var mBookmarks = emptyList<Bookmark>()
-    private val context: Context
+    private var bookmarks = emptyList<Bookmark>()
     private val coroScope = CoroutineScope(Dispatchers.IO)
     private val repository: BookmarkRepository
     override fun onCreateViewHolder(parent: ViewGroup, viewType: Int): BookmarkViewHolder {
@@ -40,8 +39,8 @@ class BookmarkListAdapter internal constructor(context: Context) : RecyclerView.
     }
 
     override fun onBindViewHolder(holder: BookmarkViewHolder, position: Int) {
-        if (mBookmarks.isNotEmpty()) {
-            val currentBookmark = mBookmarks[position]
+        if (bookmarks.isNotEmpty()) {
+            val currentBookmark = bookmarks[position]
             holder.trackTextView.text = currentBookmark.track
             holder.positionTextView.text = convertTimestamp(currentBookmark.timestampSeconds)
             holder.artistTextView.text = currentBookmark.artist
@@ -56,7 +55,7 @@ class BookmarkListAdapter internal constructor(context: Context) : RecyclerView.
                 holder.playButtonView.setImageDrawable(enableArrow)
                 holder.playButtonView.setOnClickListener {
                     val intent = Intent(context, MediaCallbackService::class.java)
-                            .setAction(MediaCallbackService.Companion.PLAY_ACTION)
+                            .setAction(MediaCallbackService.PLAY_ACTION)
                             .putExtra("bookmark", currentBookmark)
                     context.startService(intent)
                 }
@@ -66,18 +65,18 @@ class BookmarkListAdapter internal constructor(context: Context) : RecyclerView.
             }
         } else {
             // Covers the case of data not being ready yet.
-            holder.trackTextView.text = "No bookmarks stored yet!"
+            holder.trackTextView.text = context.getString(R.string.no_bookmarks_yet)
         }
     }
 
     fun setBookmarks(bookmarks: List<Bookmark>) {
-        mBookmarks = bookmarks
+        this.bookmarks = bookmarks
         notifyDataSetChanged()
     }
 
     private fun convertTimestamp(timestamp: Int): String {
         val minutes = timestamp / 60
-        val seconds = timestamp - 60 * minutes
+        val seconds = timestamp - (60 * minutes)
         var secondsStr = seconds.toString()
         if (secondsStr.length == 1) {
             secondsStr = "0$secondsStr"
@@ -85,10 +84,9 @@ class BookmarkListAdapter internal constructor(context: Context) : RecyclerView.
         return "$minutes:$secondsStr"
     }
 
-    override fun getItemCount() = mBookmarks.size
+    override fun getItemCount() = bookmarks.size
 
     init {
-        this.context = context
         val bookmarkDao = BookmarkRoomDatabase.getDatabase(context).dao()
         repository = BookmarkRepository(bookmarkDao)
     }

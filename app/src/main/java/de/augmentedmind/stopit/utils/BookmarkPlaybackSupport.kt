@@ -13,9 +13,7 @@ object BookmarkPlaybackSupport {
      */
     private val supportedPackages: MutableMap<String, PlaybackSupportState> = HashMap()
     fun isPlaybackSupportedForPackage(packageName: String): PlaybackSupportState {
-        return if (supportedPackages.containsKey(packageName)) {
-            supportedPackages[packageName]!!
-        } else PlaybackSupportState.UNKNOWN
+        return supportedPackages[packageName] ?: PlaybackSupportState.UNKNOWN
     }
 
     init {
@@ -25,7 +23,7 @@ object BookmarkPlaybackSupport {
         // Now the unsupported ones
         supportedPackages["com.snoggdoggler.android.applications.doggcatcher.v1_0"] = PlaybackSupportState.UNSUPPORTED
 
-        // TODO: we could add support by using the Spotify SDK, though
+        // TODO: see #4
         supportedPackages["com.spotify.music"] = PlaybackSupportState.UNSUPPORTED
 
         // For the time being, as the YouTube app does not seem to provide either a media ID
