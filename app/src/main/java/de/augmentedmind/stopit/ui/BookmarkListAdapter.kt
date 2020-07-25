@@ -14,6 +14,7 @@ import de.augmentedmind.stopit.ui.BookmarkListAdapter.BookmarkViewHolder
 import de.augmentedmind.stopit.db.Bookmark
 import de.augmentedmind.stopit.db.BookmarkRoomDatabase
 import de.augmentedmind.stopit.service.MediaCallbackService
+import de.augmentedmind.stopit.utils.AppInfoUtils
 import de.augmentedmind.stopit.utils.BookmarkPlaybackSupport
 import de.augmentedmind.stopit.utils.PlaybackSupportState
 import kotlinx.coroutines.CoroutineScope
@@ -23,16 +24,18 @@ import kotlinx.coroutines.launch
 class BookmarkListAdapter internal constructor(private val context: Context) : RecyclerView.Adapter<BookmarkViewHolder>() {
     inner class BookmarkViewHolder(itemView: View) : RecyclerView.ViewHolder(itemView) {
         val trackTextView: TextView = itemView.findViewById(R.id.trackTextView)
-        val playButtonView: ImageView = itemView.findViewById(R.id.playButtonView)
+        val appIconView: ImageView = itemView.findViewById(R.id.appIconImageView)
+        val playButtonView: ImageView = itemView.findViewById(R.id.playButtonImageView)
         val positionTextView: TextView = itemView.findViewById(R.id.positionTextView)
         val artistTextView: TextView = itemView.findViewById(R.id.artistTextView)
-        val deleteImageView: ImageView = itemView.findViewById(R.id.deleteImageView)
+        val deleteImageView: ImageView = itemView.findViewById(R.id.deleteButtonImageView)
     }
 
     private val layoutInflater = LayoutInflater.from(context)
     private var bookmarks = emptyList<Bookmark>()
     private val coroScope = CoroutineScope(Dispatchers.IO)
     private val repository: BookmarkRepository
+
     override fun onCreateViewHolder(parent: ViewGroup, viewType: Int): BookmarkViewHolder {
         val itemView = layoutInflater.inflate(R.layout.recyclerview_item, parent, false)
         return BookmarkViewHolder(itemView)
@@ -63,6 +66,10 @@ class BookmarkListAdapter internal constructor(private val context: Context) : R
             holder.deleteImageView.setOnClickListener {
                 coroScope.launch { repository.delete(currentBookmark) }
             }
+
+            val appInfo = AppInfoUtils.retrieveAppInfo(currentBookmark.playerPackage,
+                    context.packageManager, context.resources)
+            holder.appIconView.setImageBitmap(appInfo.bitmap)
         } else {
             // Covers the case of data not being ready yet.
             holder.trackTextView.text = context.getString(R.string.no_bookmarks_yet)
