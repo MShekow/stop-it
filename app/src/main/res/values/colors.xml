@@ -1,8 +1,10 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
-    <color name="colorPrimary">#888888</color>
+    <color name="colorPrimary">#B5B5B5</color>
     <color name="colorPrimaryDark">#00574B</color>
     <color name="colorAccent">#D81B60</color>
     <color name="buttonLabel">#d3d3d3</color>
     <color name="itemBackground">#E6E6E6</color>
+    <color name="bookmarkTopBackground">#BEC2CF</color>
+    <color name="bookmarkBottomBackground">#ABAFBC</color>
 </resources>

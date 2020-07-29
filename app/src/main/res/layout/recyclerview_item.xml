@@ -11,7 +11,7 @@
         android:id="@+id/topHalf"
         android:layout_width="wrap_content"
         android:layout_height="@dimen/app_icon_width"
-        android:background="#0C00EAFF"
+        android:background="@color/bookmarkTopBackground"
         app:layout_constraintStart_toStartOf="parent"
         app:layout_constraintTop_toTopOf="parent" />
 
@@ -19,7 +19,7 @@
         android:id="@+id/bottomHalf"
         android:layout_width="wrap_content"
         android:layout_height="@dimen/button_width"
-        android:background="#194208E3"
+        android:background="@color/bookmarkBottomBackground"
         app:layout_constraintStart_toStartOf="parent"
         app:layout_constraintTop_toBottomOf="@+id/topHalf" />
 
