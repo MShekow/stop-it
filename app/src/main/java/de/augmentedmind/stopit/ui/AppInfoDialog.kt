@@ -2,6 +2,7 @@ package de.augmentedmind.stopit.ui
 
 import android.app.Dialog
 import android.content.Intent
+import android.net.Uri
 import android.os.Bundle
 import android.widget.ImageView
 import android.widget.TextView
@@ -21,12 +22,20 @@ class AppInfoDialogFragment : DialogFragment() {
 
             builder.setTitle(R.string.app_info_title)
                     .setPositiveButton(R.string.app_info_close_button_text, null)
-            if (appInfo.isInstalled) {
-                builder.setNeutralButton(R.string.open_app) { dialog, id ->
+            val neutralButtonLabel = if (appInfo.isInstalled) R.string.open_app else R.string.open_store
+            builder.setNeutralButton(neutralButtonLabel) { dialog, id ->
+                if (appInfo.isInstalled) {
                     val launchIntent: Intent? = requireActivity()
                             .packageManager.getLaunchIntentForPackage(appInfo.packageName)
                     startActivity(launchIntent)
+                } else {
+                    val intent = Intent(Intent.ACTION_VIEW).apply {
+                        data = Uri.parse("https://play.google.com/store/apps/details?id=${appInfo.packageName}")
+                        setPackage("com.android.vending")
+                    }
+                    startActivity(intent)
                 }
+
             }
             val inflater = requireActivity().layoutInflater
             val dialogView = inflater.inflate(R.layout.app_info_dialog, null)

@@ -64,4 +64,5 @@
     <string name="app_info_package_label">Package: </string>
     <string name="app_info_package_sample">org.some.app</string>
     <string name="open_app">Open app</string>
+    <string name="open_store">Install (Google Play)</string>
 </resources>
