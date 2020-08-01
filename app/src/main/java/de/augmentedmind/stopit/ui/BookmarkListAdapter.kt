@@ -49,8 +49,12 @@ class BookmarkListAdapter internal constructor(private val context: Context) : R
             holder.trackTextView.text = currentBookmark.track
             holder.positionTextView.text = convertTimestamp(currentBookmark.timestampSeconds)
             holder.artistTextView.text = currentBookmark.artist
+            val appInfo = AppInfoUtils.retrieveAppInfo(currentBookmark.playerPackage,
+                    context.packageManager, context.resources)
             val supportState = BookmarkPlaybackSupport.isPlaybackSupportedForPackage(currentBookmark.playerPackage)
-            val disablePlayButton = supportState == PlaybackSupportState.UNKNOWN || supportState == PlaybackSupportState.UNSUPPORTED
+            val disablePlayButton = !appInfo.isInstalled
+                    || supportState == PlaybackSupportState.UNKNOWN
+                    || supportState == PlaybackSupportState.UNSUPPORTED
             if (disablePlayButton) {
                 val disabledArrow = context.resources.getDrawable(R.drawable.ic_play_arrow_gray_24dp, null)
                 holder.playButtonView.setImageDrawable(disabledArrow)
@@ -69,8 +73,6 @@ class BookmarkListAdapter internal constructor(private val context: Context) : R
                 coroScope.launch { repository.delete(currentBookmark) }
             }
 
-            val appInfo = AppInfoUtils.retrieveAppInfo(currentBookmark.playerPackage,
-                    context.packageManager, context.resources)
             holder.appIconView.setImageBitmap(appInfo.bitmap)
             holder.appIconView.setOnClickListener {
                 val newFragment = AppInfoDialogFragment.newInstance(appInfo)
