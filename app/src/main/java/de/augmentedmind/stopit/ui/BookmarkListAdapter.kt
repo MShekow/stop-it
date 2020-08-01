@@ -7,19 +7,21 @@ import android.view.View
 import android.view.ViewGroup
 import android.widget.ImageView
 import android.widget.TextView
+import androidx.appcompat.app.AppCompatActivity
 import androidx.recyclerview.widget.RecyclerView
-import de.augmentedmind.stopit.db.BookmarkRepository
 import de.augmentedmind.stopit.R
-import de.augmentedmind.stopit.ui.BookmarkListAdapter.BookmarkViewHolder
 import de.augmentedmind.stopit.db.Bookmark
+import de.augmentedmind.stopit.db.BookmarkRepository
 import de.augmentedmind.stopit.db.BookmarkRoomDatabase
 import de.augmentedmind.stopit.service.MediaCallbackService
+import de.augmentedmind.stopit.ui.BookmarkListAdapter.BookmarkViewHolder
 import de.augmentedmind.stopit.utils.AppInfoUtils
 import de.augmentedmind.stopit.utils.BookmarkPlaybackSupport
 import de.augmentedmind.stopit.utils.PlaybackSupportState
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
+
 
 class BookmarkListAdapter internal constructor(private val context: Context) : RecyclerView.Adapter<BookmarkViewHolder>() {
     inner class BookmarkViewHolder(itemView: View) : RecyclerView.ViewHolder(itemView) {
@@ -70,6 +72,11 @@ class BookmarkListAdapter internal constructor(private val context: Context) : R
             val appInfo = AppInfoUtils.retrieveAppInfo(currentBookmark.playerPackage,
                     context.packageManager, context.resources)
             holder.appIconView.setImageBitmap(appInfo.bitmap)
+            holder.appIconView.setOnClickListener {
+                val newFragment = AppInfoDialogFragment.newInstance(appInfo)
+                val activity: AppCompatActivity = context as AppCompatActivity
+                newFragment.show(activity.supportFragmentManager, "")
+            }
         } else {
             // Covers the case of data not being ready yet.
             holder.trackTextView.text = context.getString(R.string.no_bookmarks_yet)

@@ -26,7 +26,7 @@ object AppInfoUtils {
                 info = packageManager.getApplicationInfo(packageName, 0)
             } catch (e: PackageManager.NameNotFoundException) {
                 val unknownAppString = resources.getString(R.string.unknown_app_name)
-                return AppInfo(getUnknownAppBitmap(resources), "$packageName $unknownAppString")
+                return AppInfo(false, getUnknownAppBitmap(resources), unknownAppString, packageName)
             }
             val appName = info.loadLabel(packageManager).toString()
             val appIcon = info.loadIcon(packageManager)
@@ -35,7 +35,7 @@ object AppInfoUtils {
             appNameCache[packageName] = appName
         }
 
-        return AppInfo(appIconCache[packageName]!!, appNameCache[packageName]!!)
+        return AppInfo(true, appIconCache[packageName]!!, appNameCache[packageName]!!, packageName)
     }
 
     /**

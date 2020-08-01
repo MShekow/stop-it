@@ -6,7 +6,7 @@
     <string name="notification_message_perms_missing">Service not ready yet, missing permissions, see settings dialog!</string>
     <string name="title_activity_settings">Settings</string>
     <string name="no_bookmarks_yet">No bookmarks stored yet!</string>
-    <string name="unknown_app_name">unknown app</string>
+    <string name="unknown_app_name">unknown</string>
 
     <!-- Preference categories -->
     <string name="service_header">Background service</string>
@@ -55,4 +55,13 @@
     <string name="track_text_sample">Some track name</string>
     <string name="artist_text_sample">Some artist</string>
     <string name="position_sample">12:43</string>
+
+    <!-- App info dialog texts -->
+    <string name="app_info_title">App information</string>
+    <string name="app_info_close_button_text">OK</string>
+    <string name="app_info_app_name_label">Name: </string>
+    <string name="app_info_app_name_sample">Some app name</string>
+    <string name="app_info_package_label">Package: </string>
+    <string name="app_info_package_sample">org.some.app</string>
+    <string name="open_app">Open app</string>
 </resources>
