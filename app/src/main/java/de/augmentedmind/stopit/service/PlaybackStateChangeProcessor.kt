@@ -143,7 +143,11 @@ class PlaybackStateChangeProcessor(val onBookmarkDetected: (Bookmark) -> (Unit),
         val timeDiffs = StopitNotificationListenerService.lastNotificationTimestampsMs
                 .filterKeys { it != ignoredPackageName }
                 .mapValues { currentTimeMs - it.value }
-        return timeDiffs.filterValues { it < thresholdNotificationMs }.count() > 0
+        val filtered = timeDiffs.filterValues { it < thresholdNotificationMs }
+        if (filtered.count() > 0) {
+            Log.d(TAG, "Recent notifications: " + filtered.toString())
+        }
+        return filtered.count() > 0
     }
 
     companion object {
