@@ -8,6 +8,7 @@ import android.service.notification.StatusBarNotification
 import android.util.Log
 import androidx.core.app.NotificationManagerCompat
 
+
 class StopitNotificationListenerService : NotificationListenerService() {
 
     companion object {
@@ -29,9 +30,13 @@ class StopitNotificationListenerService : NotificationListenerService() {
     }
 
     override fun onNotificationPosted(sbn: StatusBarNotification) {
+        if (sbn.packageName == "android") {
+            return
+        }
+
         lastNotificationTimestampsMs[sbn.packageName] = SystemClock.elapsedRealtime()
         cleanOutdatedNotificationTimestamps()
-        Log.d(TAG, "onNotificationPosted(): updated timestamp! " + sbn.packageName)
+        Log.d(TAG, "onNotificationPosted(): updated timestamp! " + sbn.toString())
     }
 
     override fun onListenerConnected() {
