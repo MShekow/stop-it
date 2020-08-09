@@ -108,20 +108,21 @@ class MediaCallbackService : Service(), OnSharedPreferenceChangeListener {
                 return
             }
             val newState = state.state
+            Log.d(TAG, "onPlaybackStateChanged $newState (last: $lastState)")
             if (newState == lastState) {
+                Log.d(TAG, "onPlaybackStateChanged(): ignoring new state $newState because " +
+                        "it matches the old state")
                 return
             }
             if (newState != PlaybackState.STATE_PAUSED && newState != PlaybackState.STATE_PLAYING) {
-                Log.d(TAG, "onPlaybackStateChanged: ignoring irrelevant state $newState")
+                Log.d(TAG, "onPlaybackStateChanged(): ignoring irrelevant state $newState")
                 return
             }
-            Log.d(TAG, "pos " + state.position + " last updttime " + state.lastPositionUpdateTime)
             val timestampSeconds = (state.position / 1000).toInt()
-            Log.d(TAG, "timestampSeconds $timestampSeconds")
-            val correspondingController = controllers[packageAndSessionName]
-            stateChangeProcessor.processStateChange(newState, timestampSeconds, correspondingController, this.cachedMetadata, this.cachedMediaId)
+            val correspondingController = controllers[packageAndSessionName]!!
+            stateChangeProcessor.processStateChange(newState, timestampSeconds,
+                    correspondingController, this.cachedMetadata, this.cachedMediaId)
             lastState = newState
-            Log.d(TAG, "onPlaybackStateChanged " + state.state)
         }
 
         override fun onMetadataChanged(metadata: MediaMetadata?) {

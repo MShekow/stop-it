@@ -23,11 +23,11 @@ class PlaybackStateChangeProcessor(val onBookmarkDetected: (Bookmark) -> (Unit),
     private var lastPauseTimestampMs: Long = 0
     private var lastMetaData: AudioMetadata? = null
 
-    fun processStateChange(newState: Int, timestampSeconds: Int, controller: MediaController?,
+    fun processStateChange(newState: Int, timestampSeconds: Int, controller: MediaController,
                            cachedMetadata: AudioMetadata?, cachedMediaId: String?) {
         val metaData: AudioMetadata?
         val mediaId: String?
-        val mediaMetadata = controller!!.metadata
+        val mediaMetadata = controller.metadata
         if (mediaMetadata == null) {
             Log.e(TAG, "processStateChange(): Unable to get metadata (null was returned), " +
                     "using cached one instead")
