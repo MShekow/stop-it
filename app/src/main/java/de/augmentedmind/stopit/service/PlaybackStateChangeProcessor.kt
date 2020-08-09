@@ -58,11 +58,7 @@ class PlaybackStateChangeProcessor(val onBookmarkDetected: (Bookmark) -> (Unit),
                 }
                 if (metaData != lastMetaData) {
                     Log.d(MediaCallbackService.TAG, "Current: " + metaData.toString())
-                    if (lastMetaData == null) {
-                        Log.d(MediaCallbackService.TAG, "Old: null")
-                    } else {
-                        Log.d(MediaCallbackService.TAG, "Old: " + lastMetaData.toString())
-                    }
+                    Log.d(MediaCallbackService.TAG, "Old: " + lastMetaData.toString())
                     return
                 }
                 Log.d(MediaCallbackService.TAG, "Play = True. Last TS: $lastPauseTimestampMs")
