@@ -74,8 +74,8 @@ class MediaCallbackService : Service(), OnSharedPreferenceChangeListener {
             val removedControllers = this@MediaCallbackService.controllers.keys - newPackageNames.keys
             removedControllers.forEach { unregisterCallback(it) }
 
-            val addedControllers = newPackageNames - this@MediaCallbackService.controllers
-            addedControllers.forEach { registerCallback(it.value) }
+            val addedControllers = newPackageNames.keys - this@MediaCallbackService.controllers.keys
+            addedControllers.forEach { registerCallback(newPackageNames[it]!!) }
         }
     }
 
