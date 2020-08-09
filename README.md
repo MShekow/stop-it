@@ -4,7 +4,7 @@
 
 What's the use case? Just like with "normal" bookmarks you know from physical books or the web browser, *Stop It!* let's you resume audio at a later time, because you don't have time right now. It's ideal for scenarios where you're on the go (doing sports, commuting, etc.). Your hands are full, but you don't want to forget about that great inspirational quote you just heard in a podcast, or painstakingly search for that great song you just heard on Spotify an hour later. All you need to do is pause and unpause the track. You no longer need to pull out your phone, unlock it, and manually type the title and current time code into a separate notes app, just to make sure you don't forget it.
 
-![Main screen showing bookmarks](screenshots/mainscreen_v0.1.png)
+![Main screen showing bookmarks](screenshots/mainscreen_v0.2.jpg)
 
 # Usage
 1. Download the latest [release](https://github.com/MShekow/stop-it/releases) APK to your Android device (Android 5.1+) and install it.
