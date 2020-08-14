@@ -22,8 +22,13 @@ class PlaybackStateChangeProcessor(val onBookmarkDetected: (Bookmark) -> (Unit),
     private var lastPauseTimestampMs: Long = 0
     private var lastMetaData: AudioMetadata? = null
 
-    fun processStateChange(newState: Int, timestampSeconds: Int, controller: MediaController,
-                           cachedMetadata: AudioMetadata?, cachedMediaId: String?) {
+    /**
+     * Analyzes the new PlaybackState (newState) to either find that a new bookmark should be
+     * created, or determines that a track started playing whose playback was previously requested
+     * (by a call to playBookmark()), and thus it seeks to the respective timestamp.
+     */
+    fun processStateChange(newState: PlaybackState, controller: MediaController,
+                           cachedMetadata: AudioMetadata?) {
         val metaData: AudioMetadata?
         val mediaMetadata = controller.metadata
         metaData = if (mediaMetadata == null) {

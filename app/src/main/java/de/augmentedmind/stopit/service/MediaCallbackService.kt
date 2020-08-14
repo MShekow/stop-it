@@ -34,8 +34,13 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 import java.util.*
 
+/**
+ * Uses the Media API to get access to MediaControllers, and registers callbacks.
+ */
 class MediaCallbackService : Service(), OnSharedPreferenceChangeListener {
+    // Maps from audio app's package name + session name to our own MediaController instance copy
     private val controllers: MutableMap<String, MediaController> = HashMap()
+    // Maps from audio app's package name + session name to our own MediaController instance copy
     private val callbacks: MutableMap<String, MediaCB> = HashMap()
     private val serviceScope = CoroutineScope(Dispatchers.IO)
     private lateinit var sessionManager: MediaSessionManager

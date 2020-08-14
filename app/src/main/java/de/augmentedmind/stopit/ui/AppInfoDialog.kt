@@ -37,8 +37,7 @@ class AppInfoDialogFragment : DialogFragment() {
                 }
 
             }
-            val inflater = requireActivity().layoutInflater
-            val dialogView = inflater.inflate(R.layout.app_info_dialog, null)
+            val dialogView = layoutInflater.inflate(R.layout.app_info_dialog, null)
             val appNameTextView: TextView = dialogView.findViewById(R.id.appNameTextView)
             appNameTextView.text = appInfo.name
             val appIconImageView: ImageView = dialogView.findViewById(R.id.appIconImageView)

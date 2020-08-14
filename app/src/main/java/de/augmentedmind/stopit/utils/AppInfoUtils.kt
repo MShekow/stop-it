@@ -63,21 +63,20 @@ object AppInfoUtils {
             return bitmap
         }
         return if (bitmap.height > scaledDims || bitmap.width > scaledDims) {
-            // Which needs to be scaled to fit.
             val height = bitmap.height
             val width = bitmap.width
-            val scaleHeight: Int
-            val scaleWidth: Int
+            val scaledHeight: Int
+            val scaledWidth: Int
 
             // Calculate the new size based on which dimension is larger.
             if (height > width) {
-                scaleHeight = scaledDims.roundToInt()
-                scaleWidth = (width * scaledDims / height).toInt()
+                scaledHeight = scaledDims.roundToInt()
+                scaledWidth = (width * scaledDims / height).toInt()
             } else {
-                scaleWidth = scaledDims.roundToInt()
-                scaleHeight = (height * scaledDims / width).toInt()
+                scaledWidth = scaledDims.roundToInt()
+                scaledHeight = (height * scaledDims / width).toInt()
             }
-            Bitmap.createScaledBitmap(bitmap, scaleWidth, scaleHeight, false)
+            Bitmap.createScaledBitmap(bitmap, scaledWidth, scaledHeight, false)
         } else {
             bitmap
         }
