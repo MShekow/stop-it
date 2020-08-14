@@ -246,13 +246,7 @@ class MediaCallbackService : Service(), OnSharedPreferenceChangeListener {
     }
 
     private fun updateValueFromPreference(key: String, value: Any) {
-        if (key == getString(R.string.key_pause_play_min_delay_millis)) {
-            stateChangeProcessor.thresholdMinMs = value as Int
-        } else if (key == getString(R.string.key_pause_play_max_delay_millis)) {
-            stateChangeProcessor.thresholdMaxMs = value as Int
-        } else if (key == getString(R.string.key_pause_play_notification_lookback)) {
-            stateChangeProcessor.thresholdNotificationMs = value as Int
-        } else if (key == getString(R.string.key_vibrate)) {
+        if (key == getString(R.string.key_vibrate)) {
             shouldVibrate = value as Boolean
         } else if (key == getString(R.string.key_vibrate_duration)) {
             vibrationDurationMs = value as Int

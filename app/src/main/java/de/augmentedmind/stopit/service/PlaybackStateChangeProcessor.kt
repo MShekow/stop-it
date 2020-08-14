@@ -1,26 +1,36 @@
 package de.augmentedmind.stopit.service
 
 import android.content.Context
+import android.content.SharedPreferences
 import android.media.session.MediaController
 import android.media.session.PlaybackState
 import android.os.SystemClock
 import android.util.Log
 import android.widget.Toast
+import androidx.preference.PreferenceManager
+import de.augmentedmind.stopit.R
 import de.augmentedmind.stopit.db.Bookmark
 import de.augmentedmind.stopit.utils.BookmarkPlaybackSupport
 import de.augmentedmind.stopit.utils.PlaybackSupportState
 
-class PlaybackStateChangeProcessor(val onBookmarkDetected: (Bookmark) -> (Unit), val applicationContext: Context) {
+class PlaybackStateChangeProcessor(val onBookmarkDetected: (Bookmark) -> (Unit), val applicationContext: Context) : SharedPreferences.OnSharedPreferenceChangeListener  {
     // These values will be overwritten from the SharedPreferences, and will be kept up to date
     // by the SharedPreferences listener
-    var thresholdMaxMs = 2000
-    var thresholdMinMs = 500
-    var thresholdNotificationMs = 2000
+    private var thresholdMaxMs = 2000
+    private var thresholdMinMs = 500
+    private var thresholdNotificationMs = 2000
+
     private var seekModeActive = false
     private var seekModeStartTimestampMs: Long = 0
     private var seekedBookmark: Bookmark? = null
     private var lastPauseTimestampMs: Long = 0
     private var lastMetaData: AudioMetadata? = null
+
+    init {
+        val sharedPrefs = PreferenceManager.getDefaultSharedPreferences(applicationContext)
+        sharedPrefs.registerOnSharedPreferenceChangeListener(this)
+        sharedPrefs.all.forEach { updateValueFromPreference(it.key, it.value!!) }
+    }
 
     /**
      * Analyzes the new PlaybackState (newState) to either find that a new bookmark should be
@@ -179,5 +189,19 @@ class PlaybackStateChangeProcessor(val onBookmarkDetected: (Bookmark) -> (Unit),
 
     companion object {
         const val TAG = "PbStateChangeProcessor"
+    }
+
+    override fun onSharedPreferenceChanged(sharedPreferences: SharedPreferences, key: String) {
+        updateValueFromPreference(key, sharedPreferences.all[key]!!)
+    }
+
+    private fun updateValueFromPreference(key: String, value: Any) {
+        if (key == applicationContext.getString(R.string.key_pause_play_min_delay_millis)) {
+            thresholdMinMs = value as Int
+        } else if (key == applicationContext.getString(R.string.key_pause_play_max_delay_millis)) {
+            thresholdMaxMs = value as Int
+        } else if (key == applicationContext.getString(R.string.key_pause_play_notification_lookback)) {
+            thresholdNotificationMs = value as Int
+        }
     }
 }
