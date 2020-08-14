@@ -1,7 +1,6 @@
 package de.augmentedmind.stopit.service
 
 import android.content.Context
-import android.media.MediaMetadata
 import android.media.session.MediaController
 import android.media.session.PlaybackState
 import android.os.SystemClock
@@ -26,19 +25,16 @@ class PlaybackStateChangeProcessor(val onBookmarkDetected: (Bookmark) -> (Unit),
     fun processStateChange(newState: Int, timestampSeconds: Int, controller: MediaController,
                            cachedMetadata: AudioMetadata?, cachedMediaId: String?) {
         val metaData: AudioMetadata?
-        val mediaId: String?
         val mediaMetadata = controller.metadata
-        if (mediaMetadata == null) {
-            Log.e(TAG, "processStateChange(): Unable to get metadata (null was returned), " +
+        metaData = if (mediaMetadata == null) {
+            Log.w(TAG, "processStateChange(): Unable to get metadata (null was returned), " +
                     "using cached one instead")
-            metaData = cachedMetadata
-            mediaId = cachedMediaId
+            cachedMetadata
         } else {
-            metaData = Utils.getAudioMetadataFromMediaMetadata(mediaMetadata)
-            mediaId = mediaMetadata.getString(MediaMetadata.METADATA_KEY_MEDIA_ID)
+            Utils.getAudioMetadataFromMediaMetadata(mediaMetadata)
         }
         if (isSeekModeActive()) {
-            if (newState == PlaybackState.STATE_PLAYING && controller.packageName == seekedBookmark!!.playerPackage && metaData!!.track == seekedBookmark!!.track) {
+            if (newState.state == PlaybackState.STATE_PLAYING && controller.packageName == seekedBookmark!!.playerPackage && metaData!!.track == seekedBookmark!!.track) {
                 controller.transportControls.seekTo(1000 * seekedBookmark!!.timestampSeconds.toLong())
                 Log.d(MediaCallbackService.TAG, "Seek to " + seekedBookmark!!.timestampSeconds + " completed for "
                         + seekedBookmark!!.track)
@@ -48,7 +44,7 @@ class PlaybackStateChangeProcessor(val onBookmarkDetected: (Bookmark) -> (Unit),
             }
         } else {
             // Normal mode, check whether we should create a new bookmark
-            if (newState == PlaybackState.STATE_PAUSED) {
+            if (newState.state == PlaybackState.STATE_PAUSED) {
                 lastPauseTimestampMs = SystemClock.elapsedRealtime()
                 lastMetaData = metaData
             } else {
@@ -74,8 +70,17 @@ class PlaybackStateChangeProcessor(val onBookmarkDetected: (Bookmark) -> (Unit),
                     return
                 }
                 if (difference < thresholdMaxMs) {
-                    Log.d(MediaCallbackService.TAG, "Triggered event: " + metaData?.track + " ID: " + mediaId)
-                    val bookmark = Bookmark(id = 0, createdAt = System.currentTimeMillis(), artist = metaData?.artist, album = metaData?.album, track = metaData?.track, timestampSeconds = timestampSeconds, playerPackage = controller.packageName, metadata = mediaId)
+                    Log.d(MediaCallbackService.TAG, "Creating new bookmark: ${metaData?.track}")
+                    val bookmark = Bookmark(
+                            id = 0,
+                            createdAt = System.currentTimeMillis(),
+                            artist = metaData?.artist,
+                            album = metaData?.album,
+                            track = metaData?.track,
+                            timestampSeconds = (newState.position / 1000).toInt(),
+                            playerPackage = controller.packageName,
+                            metadata = metaData?.mediaId
+                    )
                     onBookmarkDetected(bookmark)
                 } else {
                     Log.d(MediaCallbackService.TAG, "Difference too large: $difference")

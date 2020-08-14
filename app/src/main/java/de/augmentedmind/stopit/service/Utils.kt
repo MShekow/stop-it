@@ -18,7 +18,8 @@ class Utils {
                 val description = mediaMetadata.description
                 if (description.subtitle != null) artist = description.subtitle.toString()
             }
-            return AudioMetadata(artist, album, track)
+            val mediaId = mediaMetadata.getString(MediaMetadata.METADATA_KEY_MEDIA_ID)
+            return AudioMetadata(artist, album, track, mediaId)
         }
     }
 }

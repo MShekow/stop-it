@@ -91,11 +91,9 @@ class MediaCallbackService : Service(), OnSharedPreferenceChangeListener {
 
     private inner class MediaCB internal constructor(private val packageAndSessionName: String) : MediaController.Callback() {
         private var lastState = -1
-        var cachedMetadata: AudioMetadata? = null
-        var cachedMediaId: String? = null
-        fun updateCachedMetadata(metadata: AudioMetadata?, mediaId: String?) {
+        private var cachedMetadata: AudioMetadata? = null
+        fun setInitialCachedMetadata(metadata: AudioMetadata) {
             cachedMetadata = metadata
-            cachedMediaId = mediaId
         }
 
         override fun onSessionDestroyed() {
@@ -118,18 +116,16 @@ class MediaCallbackService : Service(), OnSharedPreferenceChangeListener {
                 Log.d(TAG, "onPlaybackStateChanged(): ignoring irrelevant state $newState")
                 return
             }
-            val timestampSeconds = (state.position / 1000).toInt()
             val correspondingController = controllers[packageAndSessionName]!!
-            stateChangeProcessor.processStateChange(newState, timestampSeconds,
-                    correspondingController, this.cachedMetadata, this.cachedMediaId)
+            stateChangeProcessor.processStateChange(state, correspondingController,
+                    this.cachedMetadata)
             lastState = newState
         }
 
         override fun onMetadataChanged(metadata: MediaMetadata?) {
             if (metadata != null) {
                 cachedMetadata = Utils.getAudioMetadataFromMediaMetadata(metadata)
-                cachedMediaId = metadata.getString(MediaMetadata.METADATA_KEY_MEDIA_ID)
-                Log.d(TAG, "onMetadataChanged $cachedMetadata ID: $cachedMediaId")
+                Log.d(TAG, "onMetadataChanged $cachedMetadata")
             }
         }
 
@@ -292,8 +288,7 @@ class MediaCallbackService : Service(), OnSharedPreferenceChangeListener {
         Log.d(TAG, "Registered new controller callback " + Utils.getPackageAndSessionName(controller))
         val mediaMetadata = controller.metadata
         if (mediaMetadata != null) {
-            val mediaId = mediaMetadata.getString(MediaMetadata.METADATA_KEY_MEDIA_ID)
-            callback.updateCachedMetadata(Utils.getAudioMetadataFromMediaMetadata(mediaMetadata), mediaId)
+            callback.setInitialCachedMetadata(Utils.getAudioMetadataFromMediaMetadata(mediaMetadata))
         }
     }
 
