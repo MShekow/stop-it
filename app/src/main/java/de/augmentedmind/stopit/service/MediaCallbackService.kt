@@ -9,29 +9,20 @@ import android.content.Context
 import android.content.Intent
 import android.content.SharedPreferences
 import android.content.SharedPreferences.OnSharedPreferenceChangeListener
-import android.media.AudioManager
 import android.media.MediaMetadata
-import android.media.SoundPool
 import android.media.session.MediaController
 import android.media.session.MediaSessionManager
 import android.media.session.MediaSessionManager.OnActiveSessionsChangedListener
 import android.media.session.PlaybackState
 import android.os.Build
 import android.os.IBinder
-import android.os.VibrationEffect
-import android.os.Vibrator
 import android.util.Log
 import androidx.core.app.NotificationCompat
 import androidx.preference.PreferenceManager
 import de.augmentedmind.stopit.R
 import de.augmentedmind.stopit.db.Bookmark
-import de.augmentedmind.stopit.db.BookmarkRepository
-import de.augmentedmind.stopit.db.BookmarkRoomDatabase
 import de.augmentedmind.stopit.service.StopitNotificationListenerService.Companion.isEnabled
 import de.augmentedmind.stopit.ui.MainActivity
-import kotlinx.coroutines.CoroutineScope
-import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.launch
 import java.util.*
 
 /**
@@ -42,21 +33,14 @@ class MediaCallbackService : Service(), OnSharedPreferenceChangeListener {
     private val controllers: MutableMap<String, MediaController> = HashMap()
     // Maps from audio app's package name + session name to our own MediaController instance copy
     private val callbacks: MutableMap<String, MediaCB> = HashMap()
-    private val serviceScope = CoroutineScope(Dispatchers.IO)
     private lateinit var sessionManager: MediaSessionManager
     private var initialized = false
-    private lateinit var repository: BookmarkRepository
-    private lateinit var shortPlayer: SoundPool
-    private var beepSoundId = 0
     private var isNotificationActive = false
     private lateinit var stateChangeProcessor: PlaybackStateChangeProcessor
 
-    // These values will be overwritten in onCreate() by the values from the SharedPreferences, and
-    // will be kept up to date by the SharedPreferences listener
+    // useForeground will be overwritten in onCreate(), and will be kept up to date by the
+    // SharedPreferences listener
     private var useForeground = true
-    private var shouldPlaySound = true
-    private var vibrationDurationMs = 500
-    private var shouldVibrate = true
     private val sessionListener = OnActiveSessionsChangedListener { controllers ->
         if (controllers == null) {
             return@OnActiveSessionsChangedListener
@@ -89,8 +73,6 @@ class MediaCallbackService : Service(), OnSharedPreferenceChangeListener {
             useForeground = sharedPreferences.getBoolean(key, false)
             Log.d(TAG, "Foreground pref changed: $useForeground")
             createUpdateOrRemoveForegroundNotification()
-        } else {
-            updateValueFromPreference(key, sharedPreferences.all[key]!!)
         }
     }
 
@@ -187,11 +169,7 @@ class MediaCallbackService : Service(), OnSharedPreferenceChangeListener {
     }
 
     override fun onCreate() {
-        stateChangeProcessor = PlaybackStateChangeProcessor(onBookmarkDetected = ::onBookmarkDetected, applicationContext = applicationContext)
-        val bookmarkDao = BookmarkRoomDatabase.getDatabase(application).dao()
-        repository = BookmarkRepository(bookmarkDao)
-        shortPlayer = SoundPool.Builder().setMaxStreams(10).build()
-        beepSoundId = shortPlayer.load(this, R.raw.beepogg, 1)
+        stateChangeProcessor = PlaybackStateChangeProcessor(applicationContext)
         val sharedPrefs = PreferenceManager.getDefaultSharedPreferences(this)
         sharedPrefs.registerOnSharedPreferenceChangeListener(this)
         sharedPrefs.all.forEach { updateValueFromPreference(it.key, it.value!!) }
@@ -200,7 +178,7 @@ class MediaCallbackService : Service(), OnSharedPreferenceChangeListener {
 
     override fun onDestroy() {
         unregisterAllCallbacks()
-        shortPlayer.release()
+        stateChangeProcessor.releaseResources()
         super.onDestroy()
     }
 
@@ -246,13 +224,7 @@ class MediaCallbackService : Service(), OnSharedPreferenceChangeListener {
     }
 
     private fun updateValueFromPreference(key: String, value: Any) {
-        if (key == getString(R.string.key_vibrate)) {
-            shouldVibrate = value as Boolean
-        } else if (key == getString(R.string.key_vibrate_duration)) {
-            vibrationDurationMs = value as Int
-        } else if (key == getString(R.string.key_play_sound)) {
-            shouldPlaySound = value as Boolean
-        } else if (key == getString(R.string.key_enable_foreground)) {
+        if (key == getString(R.string.key_enable_foreground)) {
             useForeground = value as Boolean
         }
     }
@@ -288,38 +260,6 @@ class MediaCallbackService : Service(), OnSharedPreferenceChangeListener {
         val mediaMetadata = controller.metadata
         if (mediaMetadata != null) {
             callback.setInitialCachedMetadata(Utils.getAudioMetadataFromMediaMetadata(mediaMetadata))
-        }
-    }
-
-    private fun onBookmarkDetected(bookmark: Bookmark) {
-        serviceScope.launch { repository.insert(bookmark) }
-        if (shouldPlaySound) {
-            playBeepSound()
-        }
-        if (shouldVibrate) {
-            vibrate()
-        }
-    }
-
-    private fun playBeepSound() {
-        val audioManager = getSystemService(Context.AUDIO_SERVICE) as AudioManager
-        val actualVolume = audioManager
-                .getStreamVolume(AudioManager.STREAM_MUSIC).toFloat()
-        val maxVolume = audioManager
-                .getStreamMaxVolume(AudioManager.STREAM_MUSIC).toFloat()
-        val volume = actualVolume / maxVolume
-        shortPlayer.play(beepSoundId, volume, volume, 1, 0, 1f)
-    }
-
-    private fun vibrate() {
-        val vibrator = getSystemService(Context.VIBRATOR_SERVICE) as Vibrator
-        if (vibrator.hasVibrator()) {
-            if (Build.VERSION.SDK_INT >= 26) {
-                vibrator.vibrate(VibrationEffect.createOneShot(vibrationDurationMs.toLong(), VibrationEffect.DEFAULT_AMPLITUDE))
-            } else {
-                @Suppress("DEPRECATION")
-                vibrator.vibrate(vibrationDurationMs.toLong())
-            }
         }
     }
 

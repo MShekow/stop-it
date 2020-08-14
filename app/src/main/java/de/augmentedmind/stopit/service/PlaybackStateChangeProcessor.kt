@@ -13,7 +13,7 @@ import de.augmentedmind.stopit.db.Bookmark
 import de.augmentedmind.stopit.utils.BookmarkPlaybackSupport
 import de.augmentedmind.stopit.utils.PlaybackSupportState
 
-class PlaybackStateChangeProcessor(val onBookmarkDetected: (Bookmark) -> (Unit), val applicationContext: Context) : SharedPreferences.OnSharedPreferenceChangeListener  {
+class PlaybackStateChangeProcessor(val applicationContext: Context) : SharedPreferences.OnSharedPreferenceChangeListener {
     // These values will be overwritten from the SharedPreferences, and will be kept up to date
     // by the SharedPreferences listener
     private var thresholdMaxMs = 2000
@@ -25,6 +25,7 @@ class PlaybackStateChangeProcessor(val onBookmarkDetected: (Bookmark) -> (Unit),
     private var seekedBookmark: Bookmark? = null
     private var lastPauseTimestampMs: Long = 0
     private var lastMetaData: AudioMetadata? = null
+    private var bookmarkCreator: BookmarkCreator = BookmarkCreator(applicationContext)
 
     init {
         val sharedPrefs = PreferenceManager.getDefaultSharedPreferences(applicationContext)
@@ -147,7 +148,7 @@ class PlaybackStateChangeProcessor(val onBookmarkDetected: (Bookmark) -> (Unit),
                         playerPackage = controller.packageName,
                         metadata = metaData.mediaId
                 )
-                onBookmarkDetected(bookmark)
+                bookmarkCreator.storeAndAnnounceBookmark(bookmark)
             } else {
                 Log.d(MediaCallbackService.TAG, "Difference too large: $difference")
             }
@@ -203,5 +204,9 @@ class PlaybackStateChangeProcessor(val onBookmarkDetected: (Bookmark) -> (Unit),
         } else if (key == applicationContext.getString(R.string.key_pause_play_notification_lookback)) {
             thresholdNotificationMs = value as Int
         }
+    }
+
+    fun releaseResources() {
+        bookmarkCreator.releaseResources()
     }
 }
